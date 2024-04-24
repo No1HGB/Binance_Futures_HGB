@@ -1,0 +1,66 @@
+import time
+import datetime
+import logging
+
+
+# 로그 기록 함수
+def setup_logging():
+    # 로거 객체 생성, 로그 레벨을 DEBUG로 설정하여 모든 로그를 캡처.
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # 콘솔 핸들러
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_formatter = logging.Formatter("%(levelname)s - %(message)s")
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    # 파일 핸들러, 파일에는 ERROR 레벨 이상의 로그를 기록
+    file_handler = logging.FileHandler("logs/error_logs.log")
+    file_handler.setLevel(logging.ERROR)
+    file_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+
+
+# 간격에 따라 이전 정시로 만드는 함수(UTC)
+def rounded_time(current_utc_time, interval):
+    if interval == "1h":
+        return (current_utc_time - datetime.timedelta(hours=1)).replace(
+            minute=0, second=0, microsecond=0
+        )
+    elif interval == "4h":
+        hours_to_subtract = current_utc_time.hour % 4
+        return (current_utc_time - datetime.timedelta(hours=hours_to_subtract)).replace(
+            minute=0, second=0, microsecond=0
+        )
+    elif interval == "1d":
+        return (current_utc_time - datetime.timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+
+# 간격에 따라 다음 정시까지 대기하는 함수
+def wait_until_next_interval(interval):
+
+    now = datetime.datetime.now(datetime.UTC)
+    if interval == "1h":
+        next_time = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(
+            hours=1
+        )
+    elif interval == "4h":
+        hours_until_next = 4 - now.hour % 4
+        hours_until_next = 4 if hours_until_next == 0 else hours_until_next
+        next_time = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(
+            hours=hours_until_next
+        )
+    elif interval == "1d":
+        next_time = (now + datetime.timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+    wait_seconds = (next_time - now).total_seconds()
+    time.sleep(wait_seconds)
