@@ -54,7 +54,6 @@ def rounded_time(current_utc_time, interval):
 
 # 간격에 따라 다음 정시까지 대기하는 함수
 def wait_until_next_interval(interval):
-
     now = datetime.datetime.now(datetime.UTC)
     if interval == "1h":
         next_time = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(

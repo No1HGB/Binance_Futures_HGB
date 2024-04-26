@@ -1,6 +1,7 @@
-import datetime, asyncio
+import logging, datetime, asyncio
 import Config
 from util import (
+    setup_logging,
     rounded_time,
     wait_until_next_interval,
     divide_and_format,
@@ -27,6 +28,8 @@ from account import (
 
 
 async def main(symbol, leverage, interval):
+    setup_logging()
+    logging.info(f"{symbol} {interval} trading program start")
     key = Config.key
     secret = Config.secret
     quantities = []
@@ -47,6 +50,7 @@ async def main(symbol, leverage, interval):
     while True:
         # 정시까지 기다리기
         wait_until_next_interval(interval=interval)
+        logging.info(f"{symbol} {interval} next interval")
         # 현재 시간으로 업데이트
         current_utc_time = datetime.datetime.now(datetime.UTC)
         rounded_current_utc_time = rounded_time(current_utc_time, interval)
@@ -98,6 +102,8 @@ async def main(symbol, leverage, interval):
                     balances[0],
                     last_row["open"],
                 )
+                logging.info(f"{symbol} {interval} trend long position open")
+
             elif (
                 last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
                 and is_box
@@ -122,6 +128,7 @@ async def main(symbol, leverage, interval):
                     balances[0],
                     last_row["open"],
                 )
+                logging.info(f"{symbol} {interval} trend short position open")
 
             # 역추세(추세반전) 트레이딩 실행 로직
             elif last_row["bullish"]:
@@ -144,6 +151,7 @@ async def main(symbol, leverage, interval):
                     balances[0],
                     last_row["open"],
                 )
+                logging.info(f"{symbol} {interval} reverse long position open")
             elif last_row["bearish"]:
                 open_position(
                     key,
@@ -164,6 +172,7 @@ async def main(symbol, leverage, interval):
                     balances[0],
                     last_row["open"],
                 )
+                logging.info(f"{symbol} {interval} reverse short position open")
 
         # 해당 포지션이 있는 경우, 1/3씩 포지션 종료
         elif float(position["positionAmt"]) > 0:
@@ -174,6 +183,7 @@ async def main(symbol, leverage, interval):
                 quantities.append(remainder)
                 quantities.append(value)
             tp_sl(key, secret, symbol, "SELL", quantities[0])
+            logging.info(f"{symbol} {interval} long position close {quantities[0]}")
             quantities.pop(0)
 
         elif float(position["positionAmt"]) < 0:
@@ -184,6 +194,7 @@ async def main(symbol, leverage, interval):
                 quantities.append(remainder)
                 quantities.append(value)
             tp_sl(key, secret, symbol, "BUY", quantities[0])
+            logging.info(f"{symbol} {interval} short position close {quantities[0]}")
             quantities.pop(0)
 
 

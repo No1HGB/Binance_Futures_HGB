@@ -1,12 +1,10 @@
 import logging, datetime, math
 from binance.um_futures import UMFutures
 from binance.error import ClientError
-from util import setup_logging
 import Config
 
 
 def get_position(key, secret, symbol):
-    setup_logging()
     um_futures_client = UMFutures(key=key, secret=secret)
 
     try:
@@ -21,7 +19,6 @@ def get_position(key, secret, symbol):
 
 
 def get_balance(key, secret):
-    setup_logging()
     um_futures_client = UMFutures(key=key, secret=secret)
     try:
         data = um_futures_client.balance(recvWindow=1000)
@@ -44,7 +41,6 @@ def get_balance(key, secret):
 
 
 def change_leverage(key, secret, symbol, leverage):
-    setup_logging()
     um_futures_client = UMFutures(key=key, secret=secret)
     try:
         um_futures_client.change_leverage(
@@ -59,7 +55,6 @@ def change_leverage(key, secret, symbol, leverage):
 
 
 def open_position(key, secret, symbol, leverage, side, balance, price):
-    setup_logging()
     now_timestamp = datetime.datetime.now(datetime.UTC).timestamp() * 1000
     timestamp = now_timestamp + (57 * 60 * 1000)
     timestamp = math.floor(timestamp)

@@ -2,8 +2,5 @@
 docs.txt
 __pycache__/
 logs/
-
-example.py
-test.py
-test.json
+test/
 nohup.out
