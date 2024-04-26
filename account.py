@@ -5,32 +5,25 @@ from util import setup_logging
 import Config
 
 
-def get_positions(key, secret):
+def get_position(key, secret, symbol):
     setup_logging()
+    um_futures_client = UMFutures(key=key, secret=secret)
 
     try:
-        client = UMFutures(key=key, secret=secret)
-        symbols = Config.symbols
-        data = client.account(recvWindow=1000)
-        all_positions = data["positions"]
-        positions = [
-            position for position in all_positions if position["symbol"] in symbols
-        ]
-        return positions
+        response = um_futures_client.get_position_risk(symbol=symbol, recvWindow=1000)
+        return response[0]
     except ClientError as error:
         logging.error(
             "Found error. status: {}, error code: {}, error message: {}".format(
                 error.status_code, error.error_code, error.error_message
             )
         )
-        return None
 
 
 def get_balance(key, secret):
     setup_logging()
-
+    um_futures_client = UMFutures(key=key, secret=secret)
     try:
-        um_futures_client = UMFutures(key=key, secret=secret)
         data = um_futures_client.balance(recvWindow=1000)
         usdt_data = next((item for item in data if item["asset"] == "USDT"), None)
         if usdt_data:
@@ -50,19 +43,34 @@ def get_balance(key, secret):
         return None
 
 
-def open_trade(key, secret, symbol, side, balance, price):
+def change_leverage(key, secret, symbol, leverage):
+    setup_logging()
+    um_futures_client = UMFutures(key=key, secret=secret)
+    try:
+        um_futures_client.change_leverage(
+            symbol=symbol, leverage=leverage, recvWindow=1000
+        )
+    except ClientError as error:
+        logging.error(
+            "Found error. status: {}, error code: {}, error message: {}".format(
+                error.status_code, error.error_code, error.error_message
+            )
+        )
+
+
+def open_position(key, secret, symbol, leverage, side, balance, price):
     setup_logging()
     now_timestamp = datetime.datetime.now(datetime.UTC).timestamp() * 1000
     timestamp = now_timestamp + (57 * 60 * 1000)
     timestamp = math.floor(timestamp)
 
-    ratio = Config.margin
-    raw_quantity = balance * (ratio / 100) / price
+    ratio = Config.ratio
+    raw_quantity = balance * (ratio / 100) / price * leverage
     quantity = math.trunc(raw_quantity * 1000) / 1000
 
+    um_futures_client = UMFutures(key=key, secret=secret)
     try:
-        um_futures_client = UMFutures(key=key, secret=secret)
-        um_futures_client.new_order_test(
+        um_futures_client.new_order(
             symbol=symbol,
             side=side,
             type="LIMIT",
@@ -70,6 +78,24 @@ def open_trade(key, secret, symbol, side, balance, price):
             timeInForce="GTD",
             goodTillDate=timestamp,
             price=price,
+        )
+
+    except ClientError as error:
+        logging.error(
+            "Found error. status: {}, error code: {}, error message: {}".format(
+                error.status_code, error.error_code, error.error_message
+            )
+        )
+
+
+def tp_sl(key, secret, symbol, side, quantity):
+    um_futures_client = UMFutures(key=key, secret=secret)
+    try:
+        um_futures_client.new_order(
+            symbol=symbol,
+            side=side,
+            type="MARKET",
+            quantity=quantity,
         )
 
     except ClientError as error:

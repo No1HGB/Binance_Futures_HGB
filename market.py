@@ -3,6 +3,17 @@ import pandas as pd
 from binance.um_futures import UMFutures
 
 
+# 서버 연결 테스트
+def server_connect() -> bool:
+    um_futures_client = UMFutures()
+    response = um_futures_client.ping()
+
+    if not response:
+        return True
+    else:
+        return False
+
+
 # 과거 1500개 데이터 불러오기
 def fetch_historical_data(symbol, interval, endTime) -> pd.DataFrame:
     client = UMFutures()

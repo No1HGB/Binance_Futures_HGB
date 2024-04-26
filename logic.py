@@ -9,16 +9,37 @@ def calculate_ema(data: pd.DataFrame, days, smoothing=2):
 
 
 # 4개의 가격 박스권 여부 검사
-def check_box(data: pd.DataFrame, interval: str) -> bool:
-    if interval == "1h":
-        delta = 0.17
-        diff = 0.33
-    elif interval == "4h":
-        delta = 0.24
-        diff = 0.7
-    elif interval == "1d":
-        delta = 0.7
-        diff = 2
+def check_box(data: pd.DataFrame, symbol: str, interval: str) -> bool:
+    if symbol == "BTCUSDT":
+        if interval == "1h":
+            delta = 0.12
+            diff = 0.33
+        elif interval == "4h":
+            delta = 0.24
+            diff = 0.7
+        elif interval == "1d":
+            delta = 0.7
+            diff = 2
+    elif symbol == "ETHUSDT":
+        if interval == "1h":
+            delta = 0.17
+            diff = 0.43
+        elif interval == "4h":
+            delta = 0.24
+            diff = 0.7
+        elif interval == "1d":
+            delta = 0.7
+            diff = 2
+    elif symbol == "SOLUSDT":
+        if interval == "1h":
+            delta = 0.23
+            diff = 0.7
+        elif interval == "4h":
+            delta = 0.24
+            diff = 0.7
+        elif interval == "1d":
+            delta = 0.7
+            diff = 2
 
     last_four = data.tail(4)
     last_four["average_price"] = last_four[["open", "close"]].astype(float).mean(axis=1)
@@ -71,18 +92,18 @@ def check_short(data: pd.DataFrame, interval: str) -> bool:
     return False
 
 
-# RSI 다이버전스(임시)
-def calculate_rsi_divergences(df):
+# RSI 다이버전스 포인트
+def calculate_rsi_divergences(df: pd.DataFrame) -> pd.DataFrame:
     # RSI 계산
     close_prices = df["close"].values
     rsi = talib.RSI(close_prices, timeperiod=14)
     df["rsi"] = rsi
 
     # 가격의 극대값과 극소값 찾기
-    max_peaks = df[
+    price_max_peaks = df[
         (df["close"] > df["close"].shift(1)) & (df["close"] > df["close"].shift(-1))
     ]
-    min_troughs = df[
+    price_min_troughs = df[
         (df["close"] < df["close"].shift(1)) & (df["close"] < df["close"].shift(-1))
     ]
 
@@ -93,3 +114,25 @@ def calculate_rsi_divergences(df):
     rsi_min_troughs = df[
         (df["rsi"] < df["rsi"].shift(1)) & (df["rsi"] < df["rsi"].shift(-1))
     ]
+
+    # 베어리시 레귤러 다이버전스
+    # 가격이 상승하면서 새로운 고점을 형성하지만, RSI는 하락하여 새로운 고점을 형성하지 못하는 경우
+    bearish_divergences = price_max_peaks[
+        price_max_peaks.index.isin(rsi_max_peaks.index)
+        & (price_max_peaks["rsi"] < rsi_max_peaks["rsi"].shift(1))
+    ].index
+
+    # 불리시 레귤러 다이버전스
+    # 가격이 하락하면서 새로운 저점을 형성하지만, RSI는 상승하여 새로운 저점을 형성하지 못하는 경우
+    bullish_divergences = price_min_troughs[
+        price_min_troughs.index.isin(rsi_min_troughs.index)
+        & (price_min_troughs["rsi"] > rsi_min_troughs["rsi"].shift(1))
+    ].index
+
+    # 다이버전스 결과를 DataFrame에 추가
+    df["bearish"] = False
+    df["bullish"] = False
+    df.loc[bearish_divergences, "bearish"] = True
+    df.loc[bullish_divergences, "bullish"] = True
+
+    return df

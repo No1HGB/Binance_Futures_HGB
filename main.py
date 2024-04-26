@@ -1,12 +1,12 @@
-import datetime
-
-
+import datetime, asyncio
 import Config
 from util import (
     rounded_time,
     wait_until_next_interval,
+    divide_and_format,
 )
 from market import (
+    server_connect,
     fetch_historical_data,
     update_data,
 )
@@ -15,18 +15,21 @@ from logic import (
     check_box,
     check_long,
     check_short,
+    calculate_rsi_divergences,
+)
+from account import (
+    get_position,
+    get_balance,
+    change_leverage,
+    open_position,
+    tp_sl,
 )
 
 
-def main():
-    """
-    실행 전 서버 연결 및 서버 시간과 차이 체크, 서버 통신 함수들 None 리턴 여부 확인
-    """
-
+async def main(symbol, leverage, interval):
     key = Config.key
     secret = Config.secret
-    symbol = Config.symbol
-    interval = Config.interval
+    quantities = []
 
     # 현재 UTC 시간
     current_utc_time = datetime.datetime.now(datetime.UTC)
@@ -38,42 +41,167 @@ def main():
     # 과거 1500개의 데이터 가져오기
     data = fetch_historical_data(symbol, interval, endTime=end_timestamp)
 
-    # 매 시간마다 반복
+    # 해당 심볼 레버리지 변경
+    change_leverage(key, secret, leverage)
+
     while True:
+        # 정시까지 기다리기
         wait_until_next_interval(interval=interval)
+        # 현재 시간으로 업데이트
         current_utc_time = datetime.datetime.now(datetime.UTC)
         rounded_current_utc_time = rounded_time(current_utc_time, interval)
         end_timestamp = int(rounded_current_utc_time.timestamp() * 1000)
 
         # 데이터 업데이트 전 4개 봉 박스권 확인
-        is_box = check_box(data, interval)
+        is_box = check_box(data, symbol, interval)
 
         # 1봉 데이터 업데이트
         data = update_data(
             symbol=symbol, interval=interval, endTime=end_timestamp, data=data
         )
-        # EMA 계산
+
+        # 업데이트 후 EMA 계산, RSI 계산 및 추가
         data["EMA10"] = calculate_ema(data, 10)
         data["EMA20"] = calculate_ema(data, 20)
         data["EMA50"] = calculate_ema(data, 50)
+        data = calculate_rsi_divergences(data)
 
-        # 트레이딩 실행 로직
-        last_row = data.iloc[-1]
-        if (
-            last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
-            and is_box
-            and check_long(data, interval)
-        ):
-            print("Consider long position")
-        elif (
-            last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
-            and is_box
-            and check_short(data, interval)
-        ):
-            print("Consider short position")
-        else:
-            pass
+        position = get_position(key, secret, symbol)
+        balances = get_balance(key, secret)
+
+        # 해당 포지션이 없는 경우
+        if float(position["positionAmt"]) == 0:
+
+            # 추세 트레이딩 실행 로직
+            last_row = data.iloc[-1]
+            if (
+                last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
+                and is_box
+                and check_long(data, interval)
+            ):
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "BUY",
+                    balances[0],
+                    last_row["close"],
+                )
+                # 손절가 지정
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "SELL",
+                    balances[0],
+                    last_row["open"],
+                )
+            elif (
+                last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
+                and is_box
+                and check_short(data, interval)
+            ):
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "SELL",
+                    balances[0],
+                    last_row["close"],
+                )
+                # 손절가 지정
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "BUY",
+                    balances[0],
+                    last_row["open"],
+                )
+
+            # 역추세(추세반전) 트레이딩 실행 로직
+            elif last_row["bullish"]:
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "BUY",
+                    balances[0],
+                    last_row["close"],
+                )
+                # 손절가 지정
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "SELL",
+                    balances[0],
+                    last_row["open"],
+                )
+            elif last_row["bearish"]:
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "SELL",
+                    balances[0],
+                    last_row["close"],
+                )
+                # 손절가 지정
+                open_position(
+                    key,
+                    secret,
+                    symbol,
+                    leverage,
+                    "BUY",
+                    balances[0],
+                    last_row["open"],
+                )
+
+        # 해당 포지션이 있는 경우, 1/3씩 포지션 종료
+        elif float(position["positionAmt"]) > 0:
+            if not quantities:
+                value = divide_and_format(float(position["positionAmt"]))
+                remainder = float(position["positionAmt"]) - 2 * value
+                quantities.append(value)
+                quantities.append(remainder)
+                quantities.append(value)
+            tp_sl(key, secret, symbol, "SELL", quantities[0])
+            quantities.pop(0)
+
+        elif float(position["positionAmt"]) < 0:
+            if not quantities:
+                value = divide_and_format(float(position["positionAmt"]))
+                remainder = float(position["positionAmt"]) - 2 * value
+                quantities.append(value)
+                quantities.append(remainder)
+                quantities.append(value)
+            tp_sl(key, secret, symbol, "BUY", quantities[0])
+            quantities.pop(0)
 
 
-if __name__ == "__main__":
-    main()
+symbols = Config.symbols
+leverages = Config.leverages
+interval = Config.interval
+
+
+async def run_multiple_tasks():
+    # 여러 매개변수로 main 함수를 비동기적으로 실행
+    await asyncio.gather(
+        main(symbols[0], leverages[0], interval),
+        main(symbols[1], leverages[1], interval),
+        main(symbols[1], leverages[1], interval),
+    )
+
+
+if server_connect():
+    asyncio.run(run_multiple_tasks())
+else:
+    print("server connect problem")

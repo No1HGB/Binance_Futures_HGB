@@ -11,12 +11,21 @@ def setup_logging():
 
     # 콘솔 핸들러
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
+    console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter("%(levelname)s - %(message)s")
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    # 파일 핸들러, 파일에는 ERROR 레벨 이상의 로그를 기록
+    # INFO 레벨의 로그를 기록하는 파일 핸들러
+    info_file_handler = logging.FileHandler("logs/info_logs.log")
+    info_file_handler.setLevel(logging.INFO)
+    info_file_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    info_file_handler.setFormatter(info_file_formatter)
+    logger.addHandler(info_file_handler)
+
+    # ERROR 레벨 이상의 로그를 기록하는 파일 핸들러
     file_handler = logging.FileHandler("logs/error_logs.log")
     file_handler.setLevel(logging.ERROR)
     file_formatter = logging.Formatter(
@@ -64,3 +73,10 @@ def wait_until_next_interval(interval):
 
     wait_seconds = (next_time - now).total_seconds()
     time.sleep(wait_seconds)
+
+
+# 소수점 세 자리까지 포맷
+def divide_and_format(value):
+    result = value / 3
+    formatted_result = format(result, ".3f")
+    return formatted_result
