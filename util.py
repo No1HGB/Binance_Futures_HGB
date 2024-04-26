@@ -7,11 +7,11 @@ import logging
 def setup_logging():
     # 로거 객체 생성, 로그 레벨을 DEBUG로 설정하여 모든 로그를 캡처.
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # 콘솔 핸들러
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
+    console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter("%(levelname)s - %(message)s")
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
