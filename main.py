@@ -42,7 +42,7 @@ async def main(symbol, leverage, interval):
     data = fetch_historical_data(symbol, interval, endTime=end_timestamp)
 
     # 해당 심볼 레버리지 변경
-    change_leverage(key, secret, leverage)
+    # change_leverage(key, secret, symbol, leverage)
 
     while True:
         # 정시까지 기다리기
@@ -77,7 +77,7 @@ async def main(symbol, leverage, interval):
             if (
                 last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
                 and is_box
-                and check_long(data, interval)
+                and check_long(data, symbol, interval)
             ):
                 open_position(
                     key,
@@ -101,7 +101,7 @@ async def main(symbol, leverage, interval):
             elif (
                 last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
                 and is_box
-                and check_short(data, interval)
+                and check_short(data, symbol, interval)
             ):
                 open_position(
                     key,
@@ -197,7 +197,7 @@ async def run_multiple_tasks():
     await asyncio.gather(
         main(symbols[0], leverages[0], interval),
         main(symbols[1], leverages[1], interval),
-        main(symbols[1], leverages[1], interval),
+        main(symbols[2], leverages[2], interval),
     )
 
 

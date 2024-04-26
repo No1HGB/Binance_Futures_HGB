@@ -6,3 +6,4 @@ logs/
 example.py
 test.py
 test.json
+nohup.out

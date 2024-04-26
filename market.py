@@ -1,6 +1,7 @@
+import logging
 import pandas as pd
-
 from binance.um_futures import UMFutures
+from util import setup_logging
 
 
 # 서버 연결 테스트

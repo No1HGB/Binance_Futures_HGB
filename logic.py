@@ -1,6 +1,24 @@
 import pandas as pd
 import talib
 
+settings = {
+    "BTCUSDT": {
+        "1h": {"delta": 0.12, "diff": 0.33, "breakthrough": 0.6},
+        "4h": {"delta": 0.24, "diff": 0.7, "breakthrough": 1},
+        "1d": {"delta": 0.7, "diff": 2, "breakthrough": 2},
+    },
+    "ETHUSDT": {
+        "1h": {"delta": 0.17, "diff": 0.43, "breakthrough": 0.7},
+        "4h": {"delta": 0.24, "diff": 0.7, "breakthrough": 1},
+        "1d": {"delta": 0.7, "diff": 2, "breakthrough": 2},
+    },
+    "SOLUSDT": {
+        "1h": {"delta": 0.23, "diff": 0.7, "breakthrough": 1.2},
+        "4h": {"delta": 0.24, "diff": 0.7, "breakthrough": 2},
+        "1d": {"delta": 0.7, "diff": 2, "breakthrough": 2.5},
+    },
+}
+
 
 # EMA 계산
 def calculate_ema(data: pd.DataFrame, days, smoothing=2):
@@ -10,39 +28,15 @@ def calculate_ema(data: pd.DataFrame, days, smoothing=2):
 
 # 4개의 가격 박스권 여부 검사
 def check_box(data: pd.DataFrame, symbol: str, interval: str) -> bool:
-    if symbol == "BTCUSDT":
-        if interval == "1h":
-            delta = 0.12
-            diff = 0.33
-        elif interval == "4h":
-            delta = 0.24
-            diff = 0.7
-        elif interval == "1d":
-            delta = 0.7
-            diff = 2
-    elif symbol == "ETHUSDT":
-        if interval == "1h":
-            delta = 0.17
-            diff = 0.43
-        elif interval == "4h":
-            delta = 0.24
-            diff = 0.7
-        elif interval == "1d":
-            delta = 0.7
-            diff = 2
-    elif symbol == "SOLUSDT":
-        if interval == "1h":
-            delta = 0.23
-            diff = 0.7
-        elif interval == "4h":
-            delta = 0.24
-            diff = 0.7
-        elif interval == "1d":
-            delta = 0.7
-            diff = 2
+    if (symbol in settings) and (interval in settings[symbol]):
+        config = settings[symbol][interval]
+        delta = config["delta"]
+        diff = config["diff"]
 
-    last_four = data.tail(4)
-    last_four["average_price"] = last_four[["open", "close"]].astype(float).mean(axis=1)
+    last_four = data.tail(4).copy()  # 복사본을 생성하여 명확하게 하기
+    last_four.loc[:, "average_price"] = (
+        last_four[["open", "close"]].astype(float).mean(axis=1)
+    )
     change_rates = last_four["average_price"].pct_change() * 100
     # 인접한 평균값들의 변화율이 delta% 이하인지 확인
     change_rate_condition = (change_rates.abs().dropna() <= delta).all()
@@ -57,13 +51,10 @@ def check_box(data: pd.DataFrame, symbol: str, interval: str) -> bool:
 
 
 # 롱 진입 근거(돌파) 확인
-def check_long(data: pd.DataFrame, interval: str) -> bool:
-    if interval == "1h":
-        breakthrough = 0.5
-    elif interval == "4h":
-        breakthrough = 1
-    elif interval == "1d":
-        breakthrough = 2
+def check_long(data: pd.DataFrame, symbol: str, interval: str) -> bool:
+    if (symbol in settings) and (interval in settings[symbol]):
+        config = settings[symbol][interval]
+        breakthrough = config["breakthrough"]
 
     last_two = data.tail(2)
     if last_two.iloc[-1]["close"] > last_two.iloc[-1]["open"]:
@@ -75,13 +66,10 @@ def check_long(data: pd.DataFrame, interval: str) -> bool:
 
 
 # 숏 진입 근거(돌파) 확인
-def check_short(data: pd.DataFrame, interval: str) -> bool:
-    if interval == "1h":
-        breakthrough = 0.5
-    elif interval == "4h":
-        breakthrough = 1
-    elif interval == "1d":
-        breakthrough = 2
+def check_short(data: pd.DataFrame, symbol: str, interval: str) -> bool:
+    if (symbol in settings) and (interval in settings[symbol]):
+        config = settings[symbol][interval]
+        breakthrough = config["breakthrough"]
 
     last_two = data.tail(2)
     if last_two.iloc[-1]["close"] < last_two.iloc[-1]["open"]:
@@ -115,18 +103,28 @@ def calculate_rsi_divergences(df: pd.DataFrame) -> pd.DataFrame:
         (df["rsi"] < df["rsi"].shift(1)) & (df["rsi"] < df["rsi"].shift(-1))
     ]
 
-    # 베어리시 레귤러 다이버전스
-    # 가격이 상승하면서 새로운 고점을 형성하지만, RSI는 하락하여 새로운 고점을 형성하지 못하는 경우
-    bearish_divergences = price_max_peaks[
-        price_max_peaks.index.isin(rsi_max_peaks.index)
-        & (price_max_peaks["rsi"] < rsi_max_peaks["rsi"].shift(1))
+    # 인덱스를 동일하게 맞추기 위해 인덱스 통합
+    merged_peaks = price_max_peaks.merge(
+        rsi_max_peaks[["rsi"]],
+        left_index=True,
+        right_index=True,
+        suffixes=("", "_rsi_shifted"),
+    )
+    merged_troughs = price_min_troughs.merge(
+        rsi_min_troughs[["rsi"]],
+        left_index=True,
+        right_index=True,
+        suffixes=("", "_rsi_shifted"),
+    )
+
+    # 베어리시 레귤러 다이버전스: 가격이 상승하면서 새로운 고점을 형성하지만, RSI는 하락하여 새로운 고점을 형성하지 못하는 경우
+    bearish_divergences = merged_peaks[
+        (merged_peaks["rsi"] < merged_peaks["rsi_rsi_shifted"].shift(1))
     ].index
 
-    # 불리시 레귤러 다이버전스
-    # 가격이 하락하면서 새로운 저점을 형성하지만, RSI는 상승하여 새로운 저점을 형성하지 못하는 경우
-    bullish_divergences = price_min_troughs[
-        price_min_troughs.index.isin(rsi_min_troughs.index)
-        & (price_min_troughs["rsi"] > rsi_min_troughs["rsi"].shift(1))
+    # 불리시 레귤러 다이버전스: 가격이 하락하면서 새로운 저점을 형성하지만, RSI는 상승하여 새로운 저점을 형성하지 못하는 경우
+    bullish_divergences = merged_troughs[
+        (merged_troughs["rsi"] > merged_troughs["rsi_rsi_shifted"].shift(1))
     ].index
 
     # 다이버전스 결과를 DataFrame에 추가
