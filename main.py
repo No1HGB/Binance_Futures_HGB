@@ -28,7 +28,6 @@ from account import (
 
 
 async def main(symbol, leverage, interval):
-    setup_logging()
     logging.info(f"{symbol} {interval} trading program start")
     key = Config.key
     secret = Config.secret
@@ -49,7 +48,7 @@ async def main(symbol, leverage, interval):
 
     while True:
         # 정시까지 기다리기
-        wait_until_next_interval(interval=interval)
+        await wait_until_next_interval(interval=interval)
         logging.info(f"{symbol} {interval} next interval")
         # 현재 시간으로 업데이트
         current_utc_time = datetime.datetime.now(datetime.UTC)
@@ -213,6 +212,7 @@ async def run_multiple_tasks():
 
 
 if server_connect():
+    setup_logging()
     asyncio.run(run_multiple_tasks())
 else:
     print("server connect problem")

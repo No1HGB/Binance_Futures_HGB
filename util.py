@@ -1,6 +1,5 @@
-import time
-import datetime
-import logging
+import time, datetime, logging
+import asyncio
 
 
 # 로그 기록 함수
@@ -53,7 +52,7 @@ def rounded_time(current_utc_time, interval):
 
 
 # 간격에 따라 다음 정시까지 대기하는 함수
-def wait_until_next_interval(interval):
+async def wait_until_next_interval(interval):
     now = datetime.datetime.now(datetime.UTC)
     if interval == "1h":
         next_time = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(
@@ -71,7 +70,7 @@ def wait_until_next_interval(interval):
         )
 
     wait_seconds = (next_time - now).total_seconds()
-    time.sleep(wait_seconds)
+    await asyncio.sleep(wait_seconds)
 
 
 # 소수점 세 자리까지 포맷
