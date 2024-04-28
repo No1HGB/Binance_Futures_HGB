@@ -17,7 +17,7 @@ def server_connect() -> bool:
         return False
 
 
-# 과거 1500개 데이터 불러오기
+# 과거 721개 데이터 불러오기
 async def fetch_historical_data(symbol, interval, endTime) -> pd.DataFrame:
     loop = asyncio.get_running_loop()
     client = UMFutures()
