@@ -1,4 +1,4 @@
-import logging, datetime, asyncio
+import logging, datetime, asyncio, math
 import Config
 from util import (
     setup_logging,
@@ -40,11 +40,11 @@ async def main(symbol, leverage, interval):
     # 시작 시간과 끝 시간의 Unix 타임스탬프를 밀리초 단위로 계산
     end_timestamp = int(rounded_current_utc_time.timestamp() * 1000)
 
-    # 과거 1500개의 데이터 가져오기
+    # 과거 720개의 데이터 가져오기
     data = fetch_historical_data(symbol, interval, endTime=end_timestamp)
 
     # 해당 심볼 레버리지 변경
-    # change_leverage(key, secret, symbol, leverage)
+    change_leverage(key, secret, symbol, leverage)
 
     while True:
         # 정시까지 기다리기
@@ -56,7 +56,7 @@ async def main(symbol, leverage, interval):
         end_timestamp = int(rounded_current_utc_time.timestamp() * 1000)
 
         # 데이터 업데이트 전 4개 봉 박스권 확인
-        is_box = check_box(data, symbol, interval)
+        is_box = check_box(data)
 
         # 1봉 데이터 업데이트
         data = update_data(
@@ -70,110 +70,60 @@ async def main(symbol, leverage, interval):
         data = calculate_rsi_divergences(data)
 
         position = get_position(key, secret, symbol)
-        balances = get_balance(key, secret)
+        [balance, available] = get_balance(key, secret)
+        ratio = Config.ratio
 
         # 해당 포지션이 없는 경우
         if float(position["positionAmt"]) == 0:
 
             # 추세 트레이딩 실행 로직
             last_row = data.iloc[-1]
+
+            raw_quantity = balance * (ratio / 100) / price * leverage
+            quantity = math.trunc(raw_quantity * 1000) / 1000
             if (
-                last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
+                balance * (ratio / 100) < available
+                and last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
                 and is_box
-                and check_long(data, symbol, interval)
+                and check_long(data)
             ):
+                price = last_row["close"]
+                stopPrice = last_row["open"]
                 open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "BUY",
-                    balances[0],
-                    last_row["close"],
-                )
-                # 손절가 지정
-                open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "SELL",
-                    balances[0],
-                    last_row["open"],
+                    key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
                 logging.info(f"{symbol} {interval} trend long position open")
 
             elif (
-                last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
+                balance * (ratio / 100) < available
+                and last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
                 and is_box
-                and check_short(data, symbol, interval)
+                and check_short(data)
             ):
+                price = last_row["close"]
+                stopPrice = last_row["open"]
                 open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "SELL",
-                    balances[0],
-                    last_row["close"],
-                )
-                # 손절가 지정
-                open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "BUY",
-                    balances[0],
-                    last_row["open"],
+                    key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
                 logging.info(f"{symbol} {interval} trend short position open")
 
             # 역추세(추세반전) 트레이딩 실행 로직
             elif last_row["bullish"]:
+                price = last_row["close"]
+                stopPrice = last_row["open"]
                 open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "BUY",
-                    balances[0],
-                    last_row["close"],
-                )
-                # 손절가 지정
-                open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "SELL",
-                    balances[0],
-                    last_row["open"],
+                    key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
                 logging.info(f"{symbol} {interval} reverse long position open")
             elif last_row["bearish"]:
+                price = last_row["close"]
+                stopPrice = last_row["open"]
                 open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "SELL",
-                    balances[0],
-                    last_row["close"],
-                )
-                # 손절가 지정
-                open_position(
-                    key,
-                    secret,
-                    symbol,
-                    leverage,
-                    "BUY",
-                    balances[0],
-                    last_row["open"],
+                    key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
                 logging.info(f"{symbol} {interval} reverse short position open")
 
-        # 해당 포지션이 있는 경우, 1/3씩 포지션 종료
+        # 해당 포지션이 있는 경우, 매 시간마다 1/3씩 포지션 종료
         elif float(position["positionAmt"]) > 0:
             if not quantities:
                 value = divide_and_format(float(position["positionAmt"]))

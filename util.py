@@ -1,4 +1,4 @@
-import time, datetime, logging
+import datetime, logging
 import asyncio
 
 
@@ -76,5 +76,5 @@ async def wait_until_next_interval(interval):
 # 소수점 세 자리까지 포맷
 def divide_and_format(value):
     result = value / 3
-    formatted_result = format(result, ".3f")
+    formatted_result = float(format(result, ".3f"))
     return formatted_result

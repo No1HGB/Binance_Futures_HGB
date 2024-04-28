@@ -54,14 +54,10 @@ def change_leverage(key, secret, symbol, leverage):
         )
 
 
-def open_position(key, secret, symbol, leverage, side, balance, price):
+def open_position(key, secret, symbol, side, quantity, price, stopSide, stopPrice):
     now_timestamp = datetime.datetime.now(datetime.UTC).timestamp() * 1000
     timestamp = now_timestamp + (57 * 60 * 1000)
     timestamp = math.floor(timestamp)
-
-    ratio = Config.ratio
-    raw_quantity = balance * (ratio / 100) / price * leverage
-    quantity = math.trunc(raw_quantity * 1000) / 1000
 
     um_futures_client = UMFutures(key=key, secret=secret)
     try:
@@ -73,6 +69,14 @@ def open_position(key, secret, symbol, leverage, side, balance, price):
             timeInForce="GTD",
             goodTillDate=timestamp,
             price=price,
+        )
+        # 손절로직
+        um_futures_client.new_order(
+            symbol=symbol,
+            side=stopSide,
+            type="STOP_MARKET",
+            stopPrice=stopPrice,
+            closePosition="true",
         )
 
     except ClientError as error:
@@ -91,6 +95,7 @@ def tp_sl(key, secret, symbol, side, quantity):
             side=side,
             type="MARKET",
             quantity=quantity,
+            reduceOnly="true",
         )
 
     except ClientError as error:

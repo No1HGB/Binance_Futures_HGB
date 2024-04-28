@@ -16,7 +16,7 @@ def server_connect() -> bool:
 # 과거 1500개 데이터 불러오기
 def fetch_historical_data(symbol, interval, endTime) -> pd.DataFrame:
     client = UMFutures()
-    bars = client.klines(symbol=symbol, interval=interval, endTime=endTime, limit=1500)
+    bars = client.klines(symbol=symbol, interval=interval, endTime=endTime, limit=721)
     df = pd.DataFrame(
         bars,
         columns=[

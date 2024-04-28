@@ -2,5 +2,5 @@
 docs.txt
 __pycache__/
 logs/
-test/
+test.py
 nohup.out

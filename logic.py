@@ -1,24 +1,6 @@
 import pandas as pd
 import talib
 
-settings = {
-    "BTCUSDT": {
-        "1h": {"delta": 0.12, "diff": 0.33, "breakthrough": 0.6},
-        "4h": {"delta": 0.24, "diff": 0.7, "breakthrough": 1},
-        "1d": {"delta": 0.7, "diff": 2, "breakthrough": 2},
-    },
-    "ETHUSDT": {
-        "1h": {"delta": 0.17, "diff": 0.43, "breakthrough": 0.7},
-        "4h": {"delta": 0.24, "diff": 0.7, "breakthrough": 1},
-        "1d": {"delta": 0.7, "diff": 2, "breakthrough": 2},
-    },
-    "SOLUSDT": {
-        "1h": {"delta": 0.23, "diff": 0.7, "breakthrough": 1.2},
-        "4h": {"delta": 0.24, "diff": 0.7, "breakthrough": 2},
-        "1d": {"delta": 0.7, "diff": 2, "breakthrough": 2.5},
-    },
-}
-
 
 # EMA 계산
 def calculate_ema(data: pd.DataFrame, days, smoothing=2):
@@ -26,12 +8,34 @@ def calculate_ema(data: pd.DataFrame, days, smoothing=2):
     return data["close"].ewm(alpha=alpha, adjust=False).mean()
 
 
+# delta, diff, breakthrough 값 계산
+def cal_coefficient(data: pd.DataFrame):
+    df = data.copy()
+    df["avg_price"] = (df["open"] + df["close"]) / 2
+
+    df["price_change"] = df["close"].pct_change() * 100
+    df["avg_price_change"] = df["avg_price"].pct_change() * 100
+
+    # Drop the first NaN value after computing percent change
+    df = df.dropna()
+
+    # 평균과 표준편차 계산
+    mean_price_change = df["price_change"].mean()
+    std_price_change = df["price_change"].std()
+    mean_avg_price_change = df["avg_price_change"].mean()
+    std_avg_price_change = df["avg_price_change"].std()
+
+    # 평균+n*표준편차 및 평균+m*표준편차 값 계산
+    delta = mean_avg_price_change + 0.37 * std_avg_price_change
+    diff = mean_price_change + 0.37 * std_price_change
+    breakthrough = mean_avg_price_change + 1.2 * std_avg_price_change
+
+    return [delta, diff, breakthrough]
+
+
 # 4개의 가격 박스권 여부 검사
-def check_box(data: pd.DataFrame, symbol: str, interval: str) -> bool:
-    if (symbol in settings) and (interval in settings[symbol]):
-        config = settings[symbol][interval]
-        delta = config["delta"]
-        diff = config["diff"]
+def check_box(data: pd.DataFrame) -> bool:
+    [delta, diff, breakthrough] = cal_coefficient(data)
 
     last_four = data.tail(4).copy()  # 복사본을 생성하여 명확하게 하기
     last_four.loc[:, "average_price"] = (
@@ -51,10 +55,8 @@ def check_box(data: pd.DataFrame, symbol: str, interval: str) -> bool:
 
 
 # 롱 진입 근거(돌파) 확인
-def check_long(data: pd.DataFrame, symbol: str, interval: str) -> bool:
-    if (symbol in settings) and (interval in settings[symbol]):
-        config = settings[symbol][interval]
-        breakthrough = config["breakthrough"]
+def check_long(data: pd.DataFrame) -> bool:
+    [delta, diff, breakthrough] = cal_coefficient(data)
 
     last_two = data.tail(2)
     if last_two.iloc[-1]["close"] > last_two.iloc[-1]["open"]:
@@ -66,10 +68,8 @@ def check_long(data: pd.DataFrame, symbol: str, interval: str) -> bool:
 
 
 # 숏 진입 근거(돌파) 확인
-def check_short(data: pd.DataFrame, symbol: str, interval: str) -> bool:
-    if (symbol in settings) and (interval in settings[symbol]):
-        config = settings[symbol][interval]
-        breakthrough = config["breakthrough"]
+def check_short(data: pd.DataFrame) -> bool:
+    [delta, diff, breakthrough] = cal_coefficient(data)
 
     last_two = data.tail(2)
     if last_two.iloc[-1]["close"] < last_two.iloc[-1]["open"]:

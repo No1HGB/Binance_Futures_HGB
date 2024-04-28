@@ -12,6 +12,9 @@ requests = "*"
 openpyxl = "*"
 ta-lib = "*"
 python-dotenv = "*"
+seaborn = "*"
+matplotlib = "*"
+scipy = "*"
 
 [dev-packages]
 black = "*"
