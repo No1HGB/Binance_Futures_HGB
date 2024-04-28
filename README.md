@@ -30,7 +30,7 @@
 - 가격의 큰 상승/하락 후 역추세를 노리는 방법
 
 <p align="left">
-  <img src="/images/rsi.png" alt="RSI 다이버전스" style="width: 50%;margin-right:5%;">
+  <img src="/images/rsi.png" alt="RSI 다이버전스" style="width: 50%;margin-right:10%;">
   <img src="/images/rsi_bull.png" alt="RSI 다이버전스 롱" style="width: 20%;">
 </p>
 
