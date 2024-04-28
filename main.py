@@ -41,10 +41,10 @@ async def main(symbol, leverage, interval):
     end_timestamp = int(rounded_current_utc_time.timestamp() * 1000)
 
     # 과거 720개의 데이터 가져오기
-    data = fetch_historical_data(symbol, interval, endTime=end_timestamp)
+    data = await fetch_historical_data(symbol, interval, end_timestamp)
 
     # 해당 심볼 레버리지 변경
-    change_leverage(key, secret, symbol, leverage)
+    await change_leverage(key, secret, symbol, leverage)
 
     while True:
         # 정시까지 기다리기
@@ -59,7 +59,7 @@ async def main(symbol, leverage, interval):
         is_box = check_box(data)
 
         # 1봉 데이터 업데이트
-        data = update_data(
+        data = await update_data(
             symbol=symbol, interval=interval, endTime=end_timestamp, data=data
         )
 
@@ -69,8 +69,8 @@ async def main(symbol, leverage, interval):
         data["EMA50"] = calculate_ema(data, 50)
         data = calculate_rsi_divergences(data)
 
-        position = get_position(key, secret, symbol)
-        [balance, available] = get_balance(key, secret)
+        position = await get_position(key, secret, symbol)
+        [balance, available] = await get_balance(key, secret)
         ratio = Config.ratio
 
         # 해당 포지션이 없는 경우
@@ -89,7 +89,7 @@ async def main(symbol, leverage, interval):
             ):
                 price = last_row["close"]
                 stopPrice = last_row["open"]
-                open_position(
+                await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
                 logging.info(f"{symbol} {interval} trend long position open")
@@ -102,7 +102,7 @@ async def main(symbol, leverage, interval):
             ):
                 price = last_row["close"]
                 stopPrice = last_row["open"]
-                open_position(
+                await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
                 logging.info(f"{symbol} {interval} trend short position open")
@@ -111,14 +111,14 @@ async def main(symbol, leverage, interval):
             elif last_row["bullish"]:
                 price = last_row["close"]
                 stopPrice = last_row["open"]
-                open_position(
+                await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
                 logging.info(f"{symbol} {interval} reverse long position open")
             elif last_row["bearish"]:
                 price = last_row["close"]
                 stopPrice = last_row["open"]
-                open_position(
+                await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
                 logging.info(f"{symbol} {interval} reverse short position open")
@@ -131,7 +131,7 @@ async def main(symbol, leverage, interval):
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
-            tp_sl(key, secret, symbol, "SELL", quantities[0])
+            await tp_sl(key, secret, symbol, "SELL", quantities[0])
             logging.info(f"{symbol} {interval} long position close {quantities[0]}")
             quantities.pop(0)
 
@@ -142,7 +142,7 @@ async def main(symbol, leverage, interval):
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
-            tp_sl(key, secret, symbol, "BUY", quantities[0])
+            await tp_sl(key, secret, symbol, "BUY", quantities[0])
             logging.info(f"{symbol} {interval} short position close {quantities[0]}")
             quantities.pop(0)
 
