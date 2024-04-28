@@ -1,4 +1,4 @@
-# 바이낸스 선물거래 (BTCUSDT, ETHUSDT, SOLUSDT)
+# 바이낸스 선물 자동매매 봇 (BTCUSDT, ETHUSDT, SOLUSDT)
 
 ## 트레이딩 로직
 
