@@ -79,8 +79,6 @@ async def main(symbol, leverage, interval):
             # 추세 트레이딩 실행 로직
             last_row = data.iloc[-1]
 
-            raw_quantity = balance * (ratio / 100) / price * leverage
-            quantity = math.trunc(raw_quantity * 1000) / 1000
             if (
                 balance * (ratio / 100) < available
                 and last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
@@ -89,6 +87,8 @@ async def main(symbol, leverage, interval):
             ):
                 price = last_row["close"]
                 stopPrice = last_row["open"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = math.trunc(raw_quantity * 1000) / 1000
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
@@ -102,6 +102,8 @@ async def main(symbol, leverage, interval):
             ):
                 price = last_row["close"]
                 stopPrice = last_row["open"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = math.trunc(raw_quantity * 1000) / 1000
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
@@ -111,6 +113,8 @@ async def main(symbol, leverage, interval):
             elif last_row["bullish"]:
                 price = last_row["close"]
                 stopPrice = last_row["open"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = math.trunc(raw_quantity * 1000) / 1000
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
@@ -118,6 +122,8 @@ async def main(symbol, leverage, interval):
             elif last_row["bearish"]:
                 price = last_row["close"]
                 stopPrice = last_row["open"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = math.trunc(raw_quantity * 1000) / 1000
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
