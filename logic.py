@@ -25,29 +25,52 @@ def cal_coefficient(data: pd.DataFrame):
     std_avg_price_change = df["avg_price_change"].std()
 
     # 평균+n*표준편차 및 평균+m*표준편차 값 계산
-    delta = mean_avg_price_change + 0.37 * std_avg_price_change
-    diff = mean_price_change + 0.37 * std_price_change
-    breakthrough = mean_avg_price_change + 1.2 * std_avg_price_change
+    plus_delta = mean_avg_price_change + 0.37 * std_avg_price_change
+    minus_delta = mean_avg_price_change - 0.37 * std_avg_price_change
+    plus_diff = mean_price_change + 0.37 * std_price_change
+    minus_diff = mean_price_change - 0.37 * std_price_change
+    plus_breakthrough = mean_avg_price_change + 1.2 * std_avg_price_change
+    minus_breakthrough = mean_avg_price_change - 1.2 * std_avg_price_change
 
-    return [delta, diff, breakthrough]
+    return [
+        plus_delta,
+        minus_delta,
+        plus_diff,
+        minus_diff,
+        plus_breakthrough,
+        minus_breakthrough,
+    ]
 
 
 # 4개의 가격 박스권 여부 검사
 def check_box(data: pd.DataFrame) -> bool:
-    [delta, diff, breakthrough] = cal_coefficient(data)
+    [
+        plus_delta,
+        minus_delta,
+        plus_diff,
+        minus_diff,
+        plus_breakthrough,
+        minus_breakthrough,
+    ] = cal_coefficient(data)
 
     last_four = data.tail(4).copy()  # 복사본을 생성하여 명확하게 하기
     last_four.loc[:, "average_price"] = (
         last_four[["open", "close"]].astype(float).mean(axis=1)
     )
     change_rates = last_four["average_price"].pct_change() * 100
-    # 인접한 평균값들의 변화율이 delta% 이하인지 확인
-    change_rate_condition = (change_rates.abs().dropna() <= delta).all()
+    # 인접한 평균값들의 변화율이 양수인 경우 plus_delta% 이하 / 음수인 경우 minus_delta% 이상인지 확인
+    change_rate_condition = (
+        change_rates.dropna()
+        .apply(lambda x: x <= plus_delta if x > 0 else x >= minus_delta)
+        .all()
+    )
 
     # open과 close 값들 중 최댓값과 최솟값의 차이가 diff% 이하인지 검사
     max_value = last_four[["open", "close"]].values.max()
     min_value = last_four[["open", "close"]].values.min()
-    difference_condition = ((max_value - min_value) / min_value * 100) <= diff
+    difference_condition = (
+        (max_value - min_value) / min_value * 100
+    ) <= plus_diff and ((min_value - max_value) / max_value * 100) >= minus_diff
 
     # 두 조건이 모두 만족하면 True, 그렇지 않으면 False 반환
     return change_rate_condition and difference_condition
@@ -55,26 +78,40 @@ def check_box(data: pd.DataFrame) -> bool:
 
 # 롱 진입 근거(돌파) 확인
 def check_long(data: pd.DataFrame) -> bool:
-    [delta, diff, breakthrough] = cal_coefficient(data)
+    [
+        plus_delta,
+        minus_delta,
+        plus_diff,
+        minus_diff,
+        plus_breakthrough,
+        minus_breakthrough,
+    ] = cal_coefficient(data)
 
     last_two = data.tail(2)
     if last_two.iloc[-1]["close"] > last_two.iloc[-1]["open"]:
-        previous_high = max(last_two.iloc[-2]["open"], last_two.iloc[-2]["close"])
-        recent_close = last_two.iloc[-1]["close"]
-        return (recent_close - previous_high) / previous_high * 100 >= breakthrough
+        previous_avg = (last_two.iloc[-2]["open"] + last_two.iloc[-2]["close"]) / 2
+        recent_avg = (last_two.iloc[-1]["open"] + last_two.iloc[-1]["close"]) / 2
+        return (recent_avg - previous_avg) / previous_avg * 100 >= plus_breakthrough
 
     return False
 
 
 # 숏 진입 근거(돌파) 확인
 def check_short(data: pd.DataFrame) -> bool:
-    [delta, diff, breakthrough] = cal_coefficient(data)
+    [
+        plus_delta,
+        minus_delta,
+        plus_diff,
+        minus_diff,
+        plus_breakthrough,
+        minus_breakthrough,
+    ] = cal_coefficient(data)
 
     last_two = data.tail(2)
     if last_two.iloc[-1]["close"] < last_two.iloc[-1]["open"]:
-        previous_low = min(last_two.iloc[-2]["open"], last_two.iloc[-2]["close"])
-        recent_close = last_two.iloc[-1]["close"]
-        return (recent_close - previous_low) / previous_low * 100 >= breakthrough
+        previous_avg = (last_two.iloc[-2]["open"] + last_two.iloc[-2]["close"]) / 2
+        recent_avg = (last_two.iloc[-1]["open"] + last_two.iloc[-1]["close"]) / 2
+        return (recent_avg - previous_avg) / previous_avg * 100 <= minus_breakthrough
 
     return False
 
