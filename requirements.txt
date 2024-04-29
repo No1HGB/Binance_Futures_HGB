@@ -18,7 +18,6 @@ python-dotenv==1.0.1
 pytz==2024.1
 requests==2.31.0
 six==1.16.0
-TA-Lib==0.4.28
 tzdata==2024.1
 urllib3==2.2.1
 websocket-client==1.8.0
