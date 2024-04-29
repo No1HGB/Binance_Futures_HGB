@@ -2,14 +2,12 @@ import logging, datetime, asyncio, math
 import Config
 from util import (
     setup_logging,
-    rounded_time,
     wait_until_next_interval,
     divide_and_format,
 )
 from market import (
     server_connect,
-    fetch_historical_data,
-    update_data,
+    fetch_data,
 )
 from logic import (
     calculate_ema,
@@ -31,37 +29,25 @@ async def main(symbol, leverage, interval):
     logging.info(f"{symbol} {interval} trading program start")
     key = Config.key
     secret = Config.secret
+    ratio = Config.ratio
     quantities = []
 
-    # 현재 UTC 시간
-    current_utc_time = datetime.datetime.now(datetime.UTC)
-    rounded_current_utc_time = rounded_time(current_utc_time, interval)
-
-    # 시작 시간과 끝 시간의 Unix 타임스탬프를 밀리초 단위로 계산
-    end_timestamp = int(rounded_current_utc_time.timestamp() * 1000)
-
     # 과거 720개의 데이터 가져오기
-    data = await fetch_historical_data(symbol, interval, end_timestamp)
+    data = await fetch_data(symbol, interval)
 
     # 해당 심볼 레버리지 변경
     await change_leverage(key, secret, symbol, leverage)
 
     while True:
-        # 정시까지 기다리기
+        # 정시(+1초)까지 기다리기
         await wait_until_next_interval(interval=interval)
         logging.info(f"{symbol} {interval} next interval")
-        # 현재 시간으로 업데이트
-        current_utc_time = datetime.datetime.now(datetime.UTC)
-        rounded_current_utc_time = rounded_time(current_utc_time, interval)
-        end_timestamp = int(rounded_current_utc_time.timestamp() * 1000)
 
         # 데이터 업데이트 전 4개 봉 박스권 확인
         is_box = check_box(data)
 
-        # 1봉 데이터 업데이트
-        data = await update_data(
-            symbol=symbol, interval=interval, endTime=end_timestamp, data=data
-        )
+        # 데이터 업데이트
+        data = await fetch_data(symbol, interval)
 
         # 업데이트 후 EMA 계산, RSI 계산 및 추가
         data["EMA10"] = calculate_ema(data, 10)
@@ -71,59 +57,64 @@ async def main(symbol, leverage, interval):
 
         position = await get_position(key, secret, symbol)
         [balance, available] = await get_balance(key, secret)
-        ratio = Config.ratio
 
-        # 해당 포지션이 없는 경우
-        if float(position["positionAmt"]) == 0:
+        # 해당 포지션이 없고 포지션 진입 마진이 있는 경우
+        if float(position["positionAmt"]) == 0 and (
+            balance * (ratio / 100) < available
+        ):
 
-            # 추세 트레이딩 실행 로직
             last_row = data.iloc[-1]
-
+            # 추세 롱
             if (
-                balance * (ratio / 100) < available
-                and last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
+                last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
                 and is_box
                 and check_long(data)
             ):
-                price = last_row["close"]
-                stopPrice = last_row["open"]
+                price = max(last_row["close"], last_row["open"])
+                stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = math.trunc(raw_quantity * 1000) / 1000
+
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
                 logging.info(f"{symbol} {interval} trend long position open")
 
+            # 추세 숏
             elif (
-                balance * (ratio / 100) < available
-                and last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
+                last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
                 and is_box
                 and check_short(data)
             ):
-                price = last_row["close"]
-                stopPrice = last_row["open"]
+                price = min(last_row["close"], last_row["open"])
+                stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = math.trunc(raw_quantity * 1000) / 1000
+
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
                 logging.info(f"{symbol} {interval} trend short position open")
 
-            # 역추세(추세반전) 트레이딩 실행 로직
+            # 역추세 롱
             elif last_row["bullish"]:
-                price = last_row["close"]
-                stopPrice = last_row["open"]
+                price = max(last_row["close"], last_row["open"])
+                stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = math.trunc(raw_quantity * 1000) / 1000
+
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
                 logging.info(f"{symbol} {interval} reverse long position open")
+
+            # 역추세 숏
             elif last_row["bearish"]:
-                price = last_row["close"]
-                stopPrice = last_row["open"]
+                price = min(last_row["close"], last_row["open"])
+                stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = math.trunc(raw_quantity * 1000) / 1000
+
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
@@ -131,23 +122,27 @@ async def main(symbol, leverage, interval):
 
         # 해당 포지션이 있는 경우, 매 시간마다 1/3씩 포지션 종료
         elif float(position["positionAmt"]) > 0:
+
             if not quantities:
                 value = divide_and_format(float(position["positionAmt"]))
                 remainder = float(position["positionAmt"]) - 2 * value
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
+
             await tp_sl(key, secret, symbol, "SELL", quantities[0])
             logging.info(f"{symbol} {interval} long position close {quantities[0]}")
             quantities.pop(0)
 
         elif float(position["positionAmt"]) < 0:
+
             if not quantities:
                 value = divide_and_format(float(position["positionAmt"]))
                 remainder = float(position["positionAmt"]) - 2 * value
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
+
             await tp_sl(key, secret, symbol, "BUY", quantities[0])
             logging.info(f"{symbol} {interval} short position close {quantities[0]}")
             quantities.pop(0)

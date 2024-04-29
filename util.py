@@ -34,39 +34,29 @@ def setup_logging():
     logger.addHandler(file_handler)
 
 
-# 간격에 따라 이전 정시로 만드는 함수(UTC)
-def rounded_time(current_utc_time, interval):
-    if interval == "1h":
-        return (current_utc_time - datetime.timedelta(hours=1)).replace(
-            minute=0, second=0, microsecond=0
-        )
-    elif interval == "4h":
-        hours_to_subtract = current_utc_time.hour % 4
-        return (current_utc_time - datetime.timedelta(hours=hours_to_subtract)).replace(
-            minute=0, second=0, microsecond=0
-        )
-    elif interval == "1d":
-        return (current_utc_time - datetime.timedelta(days=1)).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-
-
 # 간격에 따라 다음 정시까지 대기하는 함수
 async def wait_until_next_interval(interval):
     now = datetime.datetime.now(datetime.UTC)
     if interval == "1h":
-        next_time = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(
-            hours=1
+        next_time = (
+            now.replace(minute=0, second=0, microsecond=0)
+            + datetime.timedelta(hours=1)
+            + datetime.timedelta(seconds=1)
         )
+
     elif interval == "4h":
         hours_until_next = 4 - now.hour % 4
         hours_until_next = 4 if hours_until_next == 0 else hours_until_next
-        next_time = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(
-            hours=hours_until_next
+        next_time = (
+            now.replace(minute=0, second=0, microsecond=0)
+            + datetime.timedelta(hours=hours_until_next)
+            + datetime.timedelta(seconds=1)
         )
     elif interval == "1d":
-        next_time = (now + datetime.timedelta(days=1)).replace(
-            hour=0, minute=0, second=0, microsecond=0
+        next_time = (
+            now.replace(hour=0, minute=0, second=0, microsecond=0)
+            + datetime.timedelta(days=1)
+            + datetime.timedelta(seconds=1)
         )
 
     wait_seconds = (next_time - now).total_seconds()

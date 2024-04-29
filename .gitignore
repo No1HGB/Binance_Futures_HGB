@@ -5,3 +5,4 @@ logs/
 test.py
 nohup.out
 Pipfile.lock
+venv

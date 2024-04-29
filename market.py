@@ -18,15 +18,14 @@ def server_connect() -> bool:
 
 
 # 과거 721개 데이터 불러오기
-async def fetch_historical_data(symbol, interval, endTime) -> pd.DataFrame:
+async def fetch_data(symbol, interval) -> pd.DataFrame:
     loop = asyncio.get_running_loop()
     client = UMFutures()
     func = partial(
         client.klines,
         symbol=symbol,
         interval=interval,
-        endTime=endTime,
-        limit=721,
+        limit=722,
     )
     try:
         bars = await loop.run_in_executor(None, func)
@@ -47,6 +46,8 @@ async def fetch_historical_data(symbol, interval, endTime) -> pd.DataFrame:
                 "ignore",
             ],
         )
+        # 마지막 행 제거
+        df = df.drop(df.index[-1])
         # 모든 열을 숫자형으로 변환
         for column in df.columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
@@ -63,52 +64,3 @@ async def fetch_historical_data(symbol, interval, endTime) -> pd.DataFrame:
         logging.error(
             "Unexpected error occurred(fetch_historical_data): {}".format(str(error))
         )
-
-
-# 최신 버전으로 데이터 업데이트
-async def update_data(symbol, interval, endTime, data: pd.DataFrame) -> pd.DataFrame:
-    loop = asyncio.get_running_loop()
-    client = UMFutures()
-    func = partial(
-        client.klines,
-        symbol=symbol,
-        interval=interval,
-        endTime=endTime,
-        limit=1,
-    )
-    try:
-        latest_data = await loop.run_in_executor(None, func)
-        latest_point = latest_data[-1]
-        new_row = pd.DataFrame(
-            [
-                {
-                    "open_time": latest_point[0],
-                    "open": latest_point[1],
-                    "high": latest_point[2],
-                    "low": latest_point[3],
-                    "close": latest_point[4],
-                    "volume": latest_point[5],
-                    "close_time": latest_point[6],
-                    "quote_asset_volume": latest_point[7],
-                    "number_of_trades": latest_point[8],
-                    "taker_buy_base_asset_volume": latest_point[9],
-                    "taker_buy_quote_asset_volume": latest_point[10],
-                    "ignore": latest_point[11],
-                }
-            ]
-        )
-        # 모든 열을 숫자형으로 변환
-        new_row = new_row.apply(pd.to_numeric, errors="coerce")
-        new_row.set_index("open_time", inplace=True)
-
-        # 가장 오래된 행 제거 및 새 행 추가: 가장 오래된 데이터 제거 및 현재 데이터 추가
-        data = pd.concat([data.iloc[1:], new_row])
-        return data
-    except ClientError as error:
-        logging.error(
-            "Found error(update_data). status: {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
-        )
-    except Exception as error:
-        logging.error("Unexpected error occurred(update_data): {}".format(str(error)))
