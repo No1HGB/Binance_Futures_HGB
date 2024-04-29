@@ -4,5 +4,3 @@ __pycache__/
 logs/
 test.py
 nohup.out
-Pipfile.lock
-venv

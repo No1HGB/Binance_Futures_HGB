@@ -1,5 +1,4 @@
 import pandas as pd
-import talib
 
 
 # EMA 계산
@@ -83,8 +82,20 @@ def check_short(data: pd.DataFrame) -> bool:
 # RSI 다이버전스 포인트
 def calculate_rsi_divergences(df: pd.DataFrame) -> pd.DataFrame:
     # RSI 계산
-    close_prices = df["close"].values
-    rsi = talib.RSI(close_prices, timeperiod=14)
+    # 가격 변동 계산
+    delta = df["close"].diff()
+
+    # 이익과 손실 분리
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+
+    # 평균 이익과 손실 계산
+    average_gain = gain.rolling(window=14, min_periods=1).mean()
+    average_loss = loss.rolling(window=14, min_periods=1).mean()
+
+    # RS 및 RSI 계산
+    rs = average_gain / average_loss
+    rsi = 100 - (100 / (1 + rs))
     df["rsi"] = rsi
 
     # 가격의 극대값과 극소값 찾기
