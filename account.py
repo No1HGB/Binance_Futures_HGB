@@ -137,3 +137,24 @@ async def tp_sl(key, secret, symbol, side, quantity):
         )
     except Exception as error:
         logging.error("Unexpected error occurred(tp_sl): {}".format(str(error)))
+
+
+async def cancel_orders(key, secret, symbol):
+    loop = asyncio.get_running_loop()
+    um_futures_client = UMFutures(key=key, secret=secret)
+    func = partial(
+        um_futures_client.cancel_open_orders,
+        symbol=symbol,
+        recvWindow=1000,
+    )
+    try:
+        await loop.run_in_executor(None, func)
+
+    except ClientError as error:
+        logging.error(
+            "Found error. status(tp_sl): {}, error code: {}, error message: {}".format(
+                error.status_code, error.error_code, error.error_message
+            )
+        )
+    except Exception as error:
+        logging.error("Unexpected error occurred(tp_sl): {}".format(str(error)))

@@ -22,6 +22,7 @@ from account import (
     change_leverage,
     open_position,
     tp_sl,
+    cancel_orders,
 )
 
 
@@ -58,7 +59,7 @@ async def main(symbol, leverage, interval):
         position = await get_position(key, secret, symbol)
         [balance, available] = await get_balance(key, secret)
 
-        # 해당 포지션이 없고 포지션 진입 마진이 있는 경우
+        # 해당 포지션이 없고 마진이 있는 경우
         if float(position["positionAmt"]) == 0 and (
             balance * (ratio / 100) < available
         ):
@@ -70,6 +71,10 @@ async def main(symbol, leverage, interval):
                 and is_box
                 and check_long(data)
             ):
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
                 price = max(last_row["close"], last_row["open"])
                 stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
@@ -86,6 +91,10 @@ async def main(symbol, leverage, interval):
                 and is_box
                 and check_short(data)
             ):
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
                 price = min(last_row["close"], last_row["open"])
                 stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
@@ -98,6 +107,10 @@ async def main(symbol, leverage, interval):
 
             # 역추세 롱
             elif last_row["bullish"]:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
                 price = max(last_row["close"], last_row["open"])
                 stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
@@ -110,6 +123,10 @@ async def main(symbol, leverage, interval):
 
             # 역추세 숏
             elif last_row["bearish"]:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
                 price = min(last_row["close"], last_row["open"])
                 stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
