@@ -27,21 +27,18 @@ def cal_coefficient(data: pd.DataFrame):
     # 평균+n*표준편차 및 평균+m*표준편차 값 계산
     plus_delta = mean_avg_price_change + 0.37 * std_avg_price_change
     minus_delta = mean_avg_price_change - 0.37 * std_avg_price_change
-    plus_diff = mean_price_change + 0.37 * std_price_change
-    minus_diff = mean_price_change - 0.37 * std_price_change
     plus_breakthrough = mean_avg_price_change + 1.2 * std_avg_price_change
     minus_breakthrough = mean_avg_price_change - 1.2 * std_avg_price_change
 
     return [
         plus_delta,
         minus_delta,
-        plus_diff,
-        minus_diff,
         plus_breakthrough,
         minus_breakthrough,
     ]
 
 
+"""
 # 4개의 가격 박스권 여부 검사
 def check_box(data: pd.DataFrame) -> bool:
     [
@@ -74,6 +71,7 @@ def check_box(data: pd.DataFrame) -> bool:
 
     # 두 조건이 모두 만족하면 True, 그렇지 않으면 False 반환
     return change_rate_condition and difference_condition
+"""
 
 
 # 롱 진입 근거(돌파) 확인
@@ -81,8 +79,6 @@ def check_long(data: pd.DataFrame) -> bool:
     [
         plus_delta,
         minus_delta,
-        plus_diff,
-        minus_diff,
         plus_breakthrough,
         minus_breakthrough,
     ] = cal_coefficient(data)
@@ -101,8 +97,6 @@ def check_short(data: pd.DataFrame) -> bool:
     [
         plus_delta,
         minus_delta,
-        plus_diff,
-        minus_diff,
         plus_breakthrough,
         minus_breakthrough,
     ] = cal_coefficient(data)

@@ -11,7 +11,6 @@ from market import (
 )
 from logic import (
     calculate_ema,
-    check_box,
     check_long,
     check_short,
     calculate_rsi_divergences,
@@ -33,19 +32,13 @@ async def main(symbol, leverage, interval):
     ratio = Config.ratio
     quantities = []
 
-    # 과거 720개의 데이터 가져오기
-    data = await fetch_data(symbol, interval)
-
-    # 해당 심볼 레버리지 변경
-    await change_leverage(key, secret, symbol, leverage)
-
     while True:
         # 정시(+1초)까지 기다리기
         await wait_until_next_interval(interval=interval)
         logging.info(f"{symbol} {interval} next interval")
 
-        # 데이터 업데이트 전 4개 봉 박스권 확인
-        is_box = check_box(data)
+        # 해당 심볼 레버리지 변경
+        await change_leverage(key, secret, symbol, leverage)
 
         # 데이터 업데이트
         data = await fetch_data(symbol, interval)
@@ -66,10 +59,8 @@ async def main(symbol, leverage, interval):
 
             last_row = data.iloc[-1]
             # 추세 롱
-            if (
-                last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"]
-                and is_box
-                and check_long(data)
+            if last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"] and check_long(
+                data
             ):
 
                 await cancel_orders(key, secret, symbol)
@@ -86,11 +77,9 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} trend long position open")
 
             # 추세 숏
-            elif (
-                last_row["EMA10"] < last_row["EMA20"] < last_row["EMA50"]
-                and is_box
-                and check_short(data)
-            ):
+            elif last_row["EMA10"] < last_row["EMA20"] < last_row[
+                "EMA50"
+            ] and check_short(data):
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
