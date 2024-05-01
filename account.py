@@ -76,8 +76,6 @@ async def open_position(
     now_timestamp = datetime.datetime.now(datetime.UTC).timestamp() * 1000
     timestamp = now_timestamp + (59 * 60 * 1000)
     timestamp = math.floor(timestamp)
-    sl_timestamp = now_timestamp + (179 * 60 * 1000)
-    sl_timestamp = math.floor(sl_timestamp)
 
     um_futures_client = UMFutures(key=key, secret=secret)
     func_open = partial(
@@ -97,8 +95,6 @@ async def open_position(
         type="STOP_MARKET",
         stopPrice=stopPrice,
         closePosition="true",
-        timeInForce="GTD",
-        goodTillDate=sl_timestamp,
     )
     try:
         await loop.run_in_executor(None, func_open)

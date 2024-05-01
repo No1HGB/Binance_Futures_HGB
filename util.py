@@ -1,4 +1,4 @@
-import datetime, logging
+import datetime, logging, math
 import asyncio
 
 
@@ -64,7 +64,9 @@ async def wait_until_next_interval(interval):
 
 
 # 소수점 세 자리까지 포맷
-def divide_and_format(value):
-    result = value / 3
-    formatted_result = float(format(result, ".3f"))
+def format_quantity(value, symbol):
+    if symbol == "SOLUSDT":
+        formatted_result = math.floor(value)
+    else:
+        formatted_result = math.floor(value * 1000) / 1000
     return formatted_result

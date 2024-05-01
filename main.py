@@ -3,7 +3,7 @@ import Config
 from util import (
     setup_logging,
     wait_until_next_interval,
-    divide_and_format,
+    format_quantity,
 )
 from market import (
     server_connect,
@@ -69,7 +69,7 @@ async def main(symbol, leverage, interval):
                 price = max(last_row["close"], last_row["open"])
                 stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = math.trunc(raw_quantity * 1000) / 1000
+                quantity = format_quantity(raw_quantity, symbol)
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -87,7 +87,7 @@ async def main(symbol, leverage, interval):
                 price = min(last_row["close"], last_row["open"])
                 stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = math.trunc(raw_quantity * 1000) / 1000
+                quantity = format_quantity(raw_quantity, symbol)
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
@@ -103,7 +103,7 @@ async def main(symbol, leverage, interval):
                 price = max(last_row["close"], last_row["open"])
                 stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = math.trunc(raw_quantity * 1000) / 1000
+                quantity = format_quantity(raw_quantity, symbol)
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -119,7 +119,7 @@ async def main(symbol, leverage, interval):
                 price = min(last_row["close"], last_row["open"])
                 stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = math.trunc(raw_quantity * 1000) / 1000
+                quantity = format_quantity(raw_quantity, symbol)
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
@@ -130,7 +130,8 @@ async def main(symbol, leverage, interval):
         elif float(position["positionAmt"]) > 0:
 
             if not quantities:
-                value = divide_and_format(float(position["positionAmt"]))
+                divide = float(position["positionAmt"]) / 3
+                value = format_quantity(divide, symbol)
                 remainder = float(position["positionAmt"]) - 2 * value
                 quantities.append(value)
                 quantities.append(remainder)
@@ -143,7 +144,8 @@ async def main(symbol, leverage, interval):
         elif float(position["positionAmt"]) < 0:
 
             if not quantities:
-                value = divide_and_format(float(position["positionAmt"]))
+                divide = float(position["positionAmt"]) / 3
+                value = format_quantity(divide, symbol)
                 remainder = float(position["positionAmt"]) - 2 * value
                 quantities.append(value)
                 quantities.append(remainder)
