@@ -50,12 +50,11 @@ async def main(symbol, leverage, interval):
         data = calculate_rsi_divergences(data)
 
         position = await get_position(key, secret, symbol)
+        positionAmt = float(position["positionAmt"])
         [balance, available] = await get_balance(key, secret)
 
         # 해당 포지션이 없고 마진이 있는 경우
-        if float(position["positionAmt"]) == 0 and (
-            balance * (ratio / 100) < available
-        ):
+        if positionAmt == 0 and (balance * (ratio / 100) < available):
 
             last_row = data.iloc[-1]
             # 추세 롱
@@ -127,12 +126,13 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} reverse short position open")
 
         # 해당 포지션이 있는 경우, 매 시간마다 1/3씩 포지션 종료
-        elif float(position["positionAmt"]) > 0:
-
+        elif positionAmt > 0:
             if not quantities:
-                divide = float(position["positionAmt"]) / 3
+                if symbol == "SOLUSDT":
+                    positionAmt = int(positionAmt)
+                divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
-                remainder = float(position["positionAmt"]) - 2 * value
+                remainder = positionAmt - 2 * value
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
@@ -141,17 +141,20 @@ async def main(symbol, leverage, interval):
             logging.info(f"{symbol} {interval} long position close {quantities[0]}")
             quantities.pop(0)
 
-        elif float(position["positionAmt"]) < 0:
+        elif positionAmt < 0:
 
             if not quantities:
-                divide = float(position["positionAmt"]) / 3
-                value = format_quantity(divide, symbol)
-                remainder = float(position["positionAmt"]) - 2 * value
-                quantities.append(value)
-                quantities.append(remainder)
-                quantities.append(value)
+                if not quantities:
+                    if symbol == "SOLUSDT":
+                        positionAmt = int(positionAmt)
+                    divide = positionAmt / 3
+                    value = format_quantity(divide, symbol)
+                    remainder = positionAmt - 2 * value
+                    quantities.append(value)
+                    quantities.append(remainder)
+                    quantities.append(value)
 
-            await tp_sl(key, secret, symbol, "BUY", quantities[0])
+            await tp_sl(key, secret, symbol, "BUY", abs(quantities[0]))
             logging.info(f"{symbol} {interval} short position close {quantities[0]}")
             quantities.pop(0)
 
