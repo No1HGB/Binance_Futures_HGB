@@ -41,7 +41,7 @@ async def wait_until_next_interval(interval):
         next_time = (
             now.replace(minute=0, second=0, microsecond=0)
             + datetime.timedelta(hours=1)
-            + datetime.timedelta(seconds=1)
+            + datetime.timedelta(seconds=2)
         )
 
     elif interval == "4h":

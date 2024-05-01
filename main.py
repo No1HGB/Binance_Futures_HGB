@@ -33,7 +33,7 @@ async def main(symbol, leverage, interval):
     quantities = []
 
     while True:
-        # 정시(+1초)까지 기다리기
+        # 정시(+2초)까지 기다리기
         await wait_until_next_interval(interval=interval)
         logging.info(f"{symbol} {interval} next interval")
 
