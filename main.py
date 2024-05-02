@@ -55,6 +55,12 @@ async def main(symbol, leverage, interval):
         data = calculate_rsi_divergences(data)
 
         # 버그 수정을 위한 로그 기록
+        rsi_info = data[["close", "rsi", "bullish", "bearish"]].tail(4)
+        logging.info(
+            f"RSI last 4 entries {symbol}: \n{rsi_info.to_string(index=False)}"
+        )
+
+        # 버그 수정을 위한 로그 기록
         open_timestamp = data.iloc[-1]["open_time"] / 1000
         open_time = datetime.datetime.fromtimestamp(open_timestamp)
         logging.info(f"openTime:{open_time}: {symbol} / cal")
@@ -74,6 +80,14 @@ async def main(symbol, leverage, interval):
         if positionAmt == 0 and (balance * (ratio / 100) < available):
 
             last_row = data.iloc[-1]
+
+            # 버그 수정을 위한 로그 기록
+            bullish = last_row["bullish"]
+            bearish = last_row["bearish"]
+            logging.info(
+                f"RSI last row {symbol} / bullish:{bullish}, bearish:{bearish}"
+            )
+
             # 추세 롱
             if last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"] and check_long(
                 data
