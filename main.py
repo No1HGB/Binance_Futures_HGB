@@ -179,28 +179,28 @@ async def main(symbol, leverage, interval):
                 quantities.append(value)
                 # 버그 수정을 위한 로그 기록
                 logging.info(f"value:{value} / remainder:{remainder}")
-
-            await tp_sl(key, secret, symbol, "SELL", quantities[0])
-            logging.info(f"{symbol} {interval} long position close {quantities[0]}")
+            if quantities[0] > 0:
+                await tp_sl(key, secret, symbol, "SELL", quantities[0])
+                logging.info(f"{symbol} {interval} long position close {quantities[0]}")
             quantities.pop(0)
 
         elif positionAmt < 0:
-
             if not quantities:
-                if not quantities:
-                    if symbol == "SOLUSDT":
-                        positionAmt = int(positionAmt)
-                    divide = positionAmt / 3
-                    value = format_quantity(divide, symbol)
-                    remainder = positionAmt - 2 * value
-                    quantities.append(value)
-                    quantities.append(remainder)
-                    quantities.append(value)
-                    # 버그 수정을 위한 로그 기록
-                    logging.info(f"value:{value} / remainder:{remainder}")
-
-            await tp_sl(key, secret, symbol, "BUY", abs(quantities[0]))
-            logging.info(f"{symbol} {interval} short position close {quantities[0]}")
+                if symbol == "SOLUSDT":
+                    positionAmt = int(positionAmt)
+                divide = positionAmt / 3
+                value = format_quantity(divide, symbol)
+                remainder = positionAmt - 2 * value
+                quantities.append(value)
+                quantities.append(remainder)
+                quantities.append(value)
+                # 버그 수정을 위한 로그 기록
+                logging.info(f"value:{value} / remainder:{remainder}")
+            if quantities[0] > 0:
+                await tp_sl(key, secret, symbol, "BUY", abs(quantities[0]))
+                logging.info(
+                    f"{symbol} {interval} short position close {quantities[0]}"
+                )
             quantities.pop(0)
 
 
