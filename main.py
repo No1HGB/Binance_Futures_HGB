@@ -60,11 +60,6 @@ async def main(symbol, leverage, interval):
             f"RSI last 4 entries {symbol}: \n{rsi_info.to_string(index=False)}"
         )
 
-        # 버그 수정을 위한 로그 기록
-        open_timestamp = data.iloc[-1]["open_time"] / 1000
-        open_time = datetime.datetime.fromtimestamp(open_timestamp)
-        logging.info(f"openTime:{open_time}: {symbol} / cal")
-
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
 
