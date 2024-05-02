@@ -46,7 +46,7 @@ async def main(symbol, leverage, interval):
         # 버그 수정을 위한 로그 기록
         open_timestamp = data.iloc[-1]["open_time"] / 1000
         open_time = datetime.datetime.fromtimestamp(open_timestamp)
-        logging.info(f"{open_time}: {symbol} / first")
+        logging.info(f"{open_time} {symbol} / first")
 
         # 업데이트 후 EMA 계산, RSI 계산 및 추가
         data["EMA10"] = calculate_ema(data, 10)
@@ -57,7 +57,7 @@ async def main(symbol, leverage, interval):
         # 버그 수정을 위한 로그 기록
         open_timestamp = data.iloc[-1]["open_time"] / 1000
         open_time = datetime.datetime.fromtimestamp(open_timestamp)
-        logging.info(f"{open_time}: {symbol} / cal")
+        logging.info(f"openTime:{open_time}: {symbol} / cal")
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
@@ -91,7 +91,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"quantity:{quantity} / trend")
                 open_timestamp = data.iloc[-1]["open_time"] / 1000
                 open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"{open_time}: {symbol} / trend")
+                logging.info(f"openTime:{open_time} {symbol} / trend")
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -115,7 +115,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"quantity:{quantity} / trend")
                 open_timestamp = data.iloc[-1]["open_time"] / 1000
                 open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"{open_time}: {symbol} / trend")
+                logging.info(f"openTime:{open_time} {symbol} / trend")
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
@@ -137,7 +137,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"quantity:{quantity} / reverse")
                 open_timestamp = data.iloc[-1]["open_time"] / 1000
                 open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"{open_time}: {symbol} / trend")
+                logging.info(f"openTime:{open_time} {symbol} / reverse")
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -159,7 +159,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"quantity:{quantity} / reverse")
                 open_timestamp = data.iloc[-1]["open_time"] / 1000
                 open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"{open_time}: {symbol} / trend")
+                logging.info(f"openTime:{open_time} {symbol} / reverse")
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
