@@ -53,14 +53,11 @@ async def fetch_data(symbol, interval) -> pd.DataFrame:
             now.replace(minute=0, second=0, microsecond=0).timestamp() * 1000
         )
         if df.iloc[-1]["open_time"] == open_time:
-            df.drop(df.index[-1])
+            df.drop(df.index[-1], inplace=True)
 
         # 모든 열을 숫자형으로 변환
         for column in df.columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
-
-        # 인덱스 설정
-        df.set_index("open_time", inplace=True)
 
         return df
 
