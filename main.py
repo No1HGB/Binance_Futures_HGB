@@ -42,16 +42,29 @@ async def main(symbol, leverage, interval):
 
         # 데이터 업데이트
         data = await fetch_data(symbol, interval)
+        
+        # 버그 수정을 위한 로그 기록
+        logging.info(f"{data.iloc[-1]["open_time"]}: {symbol} / first")
 
         # 업데이트 후 EMA 계산, RSI 계산 및 추가
         data["EMA10"] = calculate_ema(data, 10)
         data["EMA20"] = calculate_ema(data, 20)
         data["EMA50"] = calculate_ema(data, 50)
         data = calculate_rsi_divergences(data)
+        
+        # 버그 수정을 위한 로그 기록
+        logging.info(f"{data.iloc[-1]["open_time"]}: {symbol} / cal")
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
+        
+        # 버그 수정을 위한 로그 기록
+        logging.info(f"positionAmt: {positionAmt} / {symbol}")
+        
         [balance, available] = await get_balance(key, secret)
+        
+        # 버그 수정을 위한 로그 기록
+        logging.info(f"balance:{balance} / available:{available}")
 
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
@@ -69,6 +82,10 @@ async def main(symbol, leverage, interval):
                 stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                
+                # 버그 수정을 위한 로그 기록
+                logging.info(f"quantity:{quantity} / trend")
+                logging.info(f"{data.iloc[-1]["open_time"]}: {symbol} / trend")
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -87,6 +104,10 @@ async def main(symbol, leverage, interval):
                 stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                
+                # 버그 수정을 위한 로그 기록
+                logging.info(f"quantity:{quantity} / trend")
+                logging.info(f"{data.iloc[-1]["open_time"]}: {symbol} / trend")
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
@@ -103,6 +124,10 @@ async def main(symbol, leverage, interval):
                 stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                
+                # 버그 수정을 위한 로그 기록
+                logging.info(f"quantity:{quantity} / reverse")
+                logging.info(f"{data.iloc[-1]["open_time"]}: {symbol} / reverse")
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -119,6 +144,10 @@ async def main(symbol, leverage, interval):
                 stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                
+                # 버그 수정을 위한 로그 기록
+                logging.info(f"quantity:{quantity} / reverse")
+                logging.info(f"{data.iloc[-1]["open_time"]}: {symbol} / reverse")
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
@@ -136,6 +165,8 @@ async def main(symbol, leverage, interval):
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
+                # 버그 수정을 위한 로그 기록
+                logging.info(f"value:{value} / remainder:{remainder}")
 
             await tp_sl(key, secret, symbol, "SELL", quantities[0])
             logging.info(f"{symbol} {interval} long position close {quantities[0]}")
@@ -153,6 +184,8 @@ async def main(symbol, leverage, interval):
                     quantities.append(value)
                     quantities.append(remainder)
                     quantities.append(value)
+                    # 버그 수정을 위한 로그 기록
+                    logging.info(f"value:{value} / remainder:{remainder}")
 
             await tp_sl(key, secret, symbol, "BUY", abs(quantities[0]))
             logging.info(f"{symbol} {interval} short position close {quantities[0]}")

@@ -1,6 +1,7 @@
 import asyncio
 import pandas as pd
 import logging
+import datetime
 from functools import partial
 from binance.um_futures import UMFutures
 from binance.error import ClientError
@@ -46,21 +47,26 @@ async def fetch_data(symbol, interval) -> pd.DataFrame:
                 "ignore",
             ],
         )
-        # 마지막 행 제거
-        df = df.drop(df.index[-1])
+        # 만약 현재 시간 봉 데이터가 존재하면 마지막 행 제거
+        now = datetime.datetime.now(datetime.UTC)
+        open_time = int(
+            now.replace(minute=0, second=0, microsecond=0).timestamp() * 1000
+        )
+        if df.iloc[-1]["open_time"] == open_time:
+            df.drop(df.index[-1])
+
         # 모든 열을 숫자형으로 변환
         for column in df.columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
+
         # 인덱스 설정
         df.set_index("open_time", inplace=True)
+
         return df
+
     except ClientError as error:
         logging.error(
-            "Found error(fetch_historical_data). status: {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
+            f"Found error. status(fetch_data){symbol}: {error.status_code}, error code: {error.error_code}, error message: {error.error_message}"
         )
     except Exception as error:
-        logging.error(
-            "Unexpected error occurred(fetch_historical_data): {}".format(str(error))
-        )
+        logging.error(f"Unexpected error occurred(fetch_data){symbol}: {error}")

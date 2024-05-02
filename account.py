@@ -13,12 +13,10 @@ async def get_position(key, secret, symbol):
         return response[0]
     except ClientError as error:
         logging.error(
-            "Found error(get_position). status: {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
+            f"Found error. status(get_position){symbol}: {error.status_code}, error code: {error.error_code}, error message: {error.error_message}"
         )
     except Exception as error:
-        logging.error("Unexpected error occurred(get_position): {}".format(str(error)))
+        logging.error(f"Unexpected error occurred(get_position){symbol}: {error}")
 
 
 async def get_balance(key, secret):
@@ -37,12 +35,10 @@ async def get_balance(key, secret):
             raise Exception("No data found for asset 'USDT'")
     except ClientError as error:
         logging.error(
-            "Found error(get_balance). status: {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
+            f"Found error. status(get_balance): {error.status_code}, error code: {error.error_code}, error message: {error.error_message}"
         )
     except Exception as error:
-        logging.error("Unexpected error occurred(get_balance): {}".format(str(error)))
+        logging.error(f"Unexpected error occurred(get_balance): {error}")
 
 
 async def change_leverage(key, secret, symbol, leverage):
@@ -59,14 +55,10 @@ async def change_leverage(key, secret, symbol, leverage):
 
     except ClientError as error:
         logging.error(
-            "Found error(change_leverage). status: {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
+            f"Found error. status(change_leverage){symbol}: {error.status_code}, error code: {error.error_code}, error message: {error.error_message}"
         )
     except Exception as error:
-        logging.error(
-            "Unexpected error occurred(change_leverage): {}".format(str(error))
-        )
+        logging.error(f"Unexpected error occurred(change_leverage){symbol}: {error}")
 
 
 async def open_position(
@@ -103,12 +95,10 @@ async def open_position(
 
     except ClientError as error:
         logging.error(
-            "Found error(open_positon). status: {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
+            f"Found error. status(open_position){symbol}: {error.status_code}, error code: {error.error_code}, error message: {error.error_message}"
         )
     except Exception as error:
-        logging.error("Unexpected error occurred(open_position): {}".format(str(error)))
+        logging.error(f"Unexpected error occurred(open_position){symbol}: {error}")
 
 
 async def tp_sl(key, secret, symbol, side, quantity):
@@ -127,12 +117,10 @@ async def tp_sl(key, secret, symbol, side, quantity):
 
     except ClientError as error:
         logging.error(
-            "Found error. status(tp_sl): {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
+            f"Found error. status(tp_sl){symbol}: {error.status_code}, error code: {error.error_code}, error message: {error.error_message}"
         )
     except Exception as error:
-        logging.error("Unexpected error occurred(tp_sl): {}".format(str(error)))
+        logging.error(f"Unexpected error occurred(tp_sl){symbol}: {error}")
 
 
 async def cancel_orders(key, secret, symbol):
@@ -148,9 +136,7 @@ async def cancel_orders(key, secret, symbol):
 
     except ClientError as error:
         logging.error(
-            "Found error. status(tp_sl): {}, error code: {}, error message: {}".format(
-                error.status_code, error.error_code, error.error_message
-            )
+            f"Found error. status(cancel_orders){symbol}: {error.status_code}, error code: {error.error_code}, error message: {error.error_message}"
         )
     except Exception as error:
-        logging.error("Unexpected error occurred(tp_sl): {}".format(str(error)))
+        logging.error(f"Unexpected error occurred(cancel_orders){symbol}: {error}")
