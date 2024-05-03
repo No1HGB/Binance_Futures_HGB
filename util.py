@@ -50,13 +50,13 @@ async def wait_until_next_interval(interval):
         next_time = (
             now.replace(minute=0, second=0, microsecond=0)
             + datetime.timedelta(hours=hours_until_next)
-            + datetime.timedelta(seconds=1)
+            + datetime.timedelta(seconds=2)
         )
     elif interval == "1d":
         next_time = (
             now.replace(hour=0, minute=0, second=0, microsecond=0)
             + datetime.timedelta(days=1)
-            + datetime.timedelta(seconds=1)
+            + datetime.timedelta(seconds=2)
         )
 
     wait_seconds = (next_time - now).total_seconds()

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -54,26 +55,28 @@ def check_short(data: pd.DataFrame) -> bool:
     return False
 
 
-# RSI 다이버전스 포인트
-def calculate_rsi_divergences(df: pd.DataFrame) -> pd.DataFrame:
+# RSI 계산
+def calculate_rsi(df: pd.DataFrame) -> pd.DataFrame:
     # RSI 계산
     # 가격 변동 계산
-    delta = df["close"].diff()
+    df["delta"] = df["close"] - df["close"].shift(1)
 
     # 이익과 손실 분리
-    gain = delta.where(delta > 0, 0)
-    loss = -delta.where(delta < 0, 0)
+    df["gain"] = np.where(df["delta"] >= 0, df["delta"], 0)
+    df["loss"] = np.where(df["delta"] < 0, df["delta"].abs(), 0)
 
     # 평균 이익과 손실 계산
-    average_gain = gain.rolling(window=14, min_periods=1).mean()
-    average_loss = loss.rolling(window=14, min_periods=1).mean()
+    df["avg_gain"] = df["gain"].ewm(alpha=1 / 14, min_periods=14).mean()
+    df["avg_loss"] = df["loss"].ewm(alpha=1 / 14, min_periods=14).mean()
 
-    # RS 및 RSI 계산
-    rs = average_gain / average_loss
-    rsi = 100 - (100 / (1 + rs))
-    df["rsi"] = rsi
+    # RSI 계산
+    df["rsi"] = df["avg_gain"] / (df["avg_gain"] + df["avg_loss"]) * 100
 
-    # 가격의 극대값과 극소값 찾기
+    return df
+
+
+def is_divergence(df: pd.DataFrame) -> list:
+    # 가격 극대값과 극소값 찾기
     price_max_peaks = df[
         (df["close"] > df["close"].shift(1)) & (df["close"] > df["close"].shift(-1))
     ]
@@ -89,34 +92,39 @@ def calculate_rsi_divergences(df: pd.DataFrame) -> pd.DataFrame:
         (df["rsi"] < df["rsi"].shift(1)) & (df["rsi"] < df["rsi"].shift(-1))
     ]
 
-    # 인덱스를 동일하게 맞추기 위해 인덱스 통합
-    merged_peaks = price_max_peaks.merge(
-        rsi_max_peaks[["rsi"]],
-        left_index=True,
-        right_index=True,
-        suffixes=("", "_rsi_shifted"),
-    )
-    merged_troughs = price_min_troughs.merge(
-        rsi_min_troughs[["rsi"]],
-        left_index=True,
-        right_index=True,
-        suffixes=("", "_rsi_shifted"),
-    )
+    # 변수들
+    last_index = df.index[-1]
+    last_index_price_max = price_max_peaks.index[-1]
+    last_index_price_min = price_min_troughs.index[-1]
+    last_index_rsi_max = rsi_max_peaks.index[-1]
+    last_index_rsi_min = rsi_min_troughs.index[-1]
 
-    # 베어리시 레귤러 다이버전스: 가격이 상승하면서 새로운 고점을 형성하지만, RSI는 하락하여 새로운 고점을 형성하지 못하는 경우
-    bearish_divergences = merged_peaks[
-        (merged_peaks["rsi"] < merged_peaks["rsi_rsi_shifted"].shift(1))
-    ].index
+    last_price_max = price_max_peaks.iloc[-1]["close"]
+    last_two_price_max = price_max_peaks.iloc[-2]["close"]
+    last_price_min = price_min_troughs.iloc[-1]["close"]
+    last_two_price_min = price_min_troughs.iloc[-2]["close"]
 
-    # 불리시 레귤러 다이버전스: 가격이 하락하면서 새로운 저점을 형성하지만, RSI는 상승하여 새로운 저점을 형성하지 못하는 경우
-    bullish_divergences = merged_troughs[
-        (merged_troughs["rsi"] > merged_troughs["rsi_rsi_shifted"].shift(1))
-    ].index
+    last_rsi_max = rsi_max_peaks.iloc[-1]["rsi"]
+    last_two_rsi_max = rsi_max_peaks.iloc[-2]["rsi"]
+    last_rsi_min = rsi_min_troughs.iloc[-1]["rsi"]
+    last_two_rsi_min = rsi_min_troughs.iloc[-2]["rsi"]
 
-    # 다이버전스 결과를 DataFrame에 추가
-    df["bearish"] = False
-    df["bullish"] = False
-    df.loc[bearish_divergences, "bearish"] = True
-    df.loc[bullish_divergences, "bullish"] = True
+    bullish = False
+    bearish = False
 
-    return df
+    # bullish
+    if last_index == last_index_price_max and last_index == last_index_rsi_max:
+        if (
+            last_price_max - last_two_price_max > 0
+            and last_rsi_max - last_two_rsi_max < 0
+        ):
+            bullish = True
+    # bearish
+    elif last_index == last_index_price_min and last_index == last_index_rsi_min:
+        if (
+            last_price_min - last_two_price_min < 0
+            and last_rsi_min - last_two_rsi_min > 0
+        ):
+            bearish = True
+
+    return [bullish, bearish]

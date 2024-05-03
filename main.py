@@ -13,7 +13,8 @@ from logic import (
     calculate_ema,
     check_long,
     check_short,
-    calculate_rsi_divergences,
+    calculate_rsi,
+    is_divergence,
 )
 from account import (
     get_position,
@@ -43,45 +44,22 @@ async def main(symbol, leverage, interval):
         # 데이터 업데이트
         data = await fetch_data(symbol, interval)
 
-        # 버그 수정을 위한 로그 기록
-        open_timestamp = data.iloc[-1]["open_time"] / 1000
-        open_time = datetime.datetime.fromtimestamp(open_timestamp)
-        logging.info(f"{open_time} {symbol} / first")
-
         # 업데이트 후 EMA 계산, RSI 계산 및 추가
         data["EMA10"] = calculate_ema(data, 10)
         data["EMA20"] = calculate_ema(data, 20)
         data["EMA50"] = calculate_ema(data, 50)
-        data = calculate_rsi_divergences(data)
-
-        # 버그 수정을 위한 로그 기록
-        rsi_info = data[["close", "rsi", "bullish", "bearish"]].tail(4)
-        logging.info(
-            f"RSI last 4 entries {symbol}: \n{rsi_info.to_string(index=False)}"
-        )
+        data = calculate_rsi(data)
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
 
-        # 버그 수정을 위한 로그 기록
-        logging.info(f"positionAmt: {positionAmt} / {symbol}")
-
         [balance, available] = await get_balance(key, secret)
-
-        # 버그 수정을 위한 로그 기록
-        logging.info(f"balance:{balance} / available:{available}")
 
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
 
             last_row = data.iloc[-1]
-
-            # 버그 수정을 위한 로그 기록
-            bullish = last_row["bullish"]
-            bearish = last_row["bearish"]
-            logging.info(
-                f"RSI last row {symbol} / bullish:{bullish}, bearish:{bearish}"
-            )
+            [bullish, bearish] = is_divergence(data)
 
             # 추세 롱
             if last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"] and check_long(
@@ -95,12 +73,6 @@ async def main(symbol, leverage, interval):
                 stopPrice = min(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
-
-                # 버그 수정을 위한 로그 기록
-                logging.info(f"quantity:{quantity} / trend")
-                open_timestamp = data.iloc[-1]["open_time"] / 1000
-                open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"openTime:{open_time} {symbol} / trend")
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -120,19 +92,13 @@ async def main(symbol, leverage, interval):
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
-                # 버그 수정을 위한 로그 기록
-                logging.info(f"quantity:{quantity} / trend")
-                open_timestamp = data.iloc[-1]["open_time"] / 1000
-                open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"openTime:{open_time} {symbol} / trend")
-
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
                 logging.info(f"{symbol} {interval} trend short position open")
 
             # 역추세 롱
-            elif last_row["bullish"] == True:
+            elif bullish == True:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -142,19 +108,13 @@ async def main(symbol, leverage, interval):
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
-                # 버그 수정을 위한 로그 기록
-                logging.info(f"quantity:{quantity} / reverse")
-                open_timestamp = data.iloc[-1]["open_time"] / 1000
-                open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"openTime:{open_time} {symbol} / reverse")
-
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
                 logging.info(f"{symbol} {interval} reverse long position open")
 
             # 역추세 숏
-            elif last_row["bearish"] == True:
+            elif bearish == True:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -163,12 +123,6 @@ async def main(symbol, leverage, interval):
                 stopPrice = max(last_row["close"], last_row["open"])
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
-
-                # 버그 수정을 위한 로그 기록
-                logging.info(f"quantity:{quantity} / reverse")
-                open_timestamp = data.iloc[-1]["open_time"] / 1000
-                open_time = datetime.datetime.fromtimestamp(open_timestamp)
-                logging.info(f"openTime:{open_time} {symbol} / reverse")
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
