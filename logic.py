@@ -78,18 +78,30 @@ def calculate_rsi(df: pd.DataFrame) -> pd.DataFrame:
 def is_divergence(df: pd.DataFrame) -> list:
     # 가격 극대값과 극소값 찾기
     price_max_peaks = df[
-        (df["close"] > df["close"].shift(1)) & (df["close"] > df["close"].shift(-1))
+        (df["close"] > df["close"].shift(1))
+        & (df["close"] > df["close"].shift(-1))
+        & (df["close"].shift(-1) > df["close"].shift(-2))
+        & (df["close"].shift(1) > df["close"].shift(2))
     ]
     price_min_troughs = df[
-        (df["close"] < df["close"].shift(1)) & (df["close"] < df["close"].shift(-1))
+        (df["close"] < df["close"].shift(1))
+        & (df["close"] < df["close"].shift(-1))
+        & (df["close"].shift(-1) < df["close"].shift(-2))
+        & (df["close"].shift(1) < df["close"].shift(2))
     ]
 
     # RSI의 극대값과 극소값 찾기
     rsi_max_peaks = df[
-        (df["rsi"] > df["rsi"].shift(1)) & (df["rsi"] > df["rsi"].shift(-1))
+        (df["rsi"] > df["rsi"].shift(1))
+        & (df["rsi"] > df["rsi"].shift(-1))
+        & (df["rsi"].shift(-1) > df["rsi"].shift(-2))
+        & (df["rsi"].shift(1) > df["rsi"].shift(2))
     ]
     rsi_min_troughs = df[
-        (df["rsi"] < df["rsi"].shift(1)) & (df["rsi"] < df["rsi"].shift(-1))
+        (df["rsi"] < df["rsi"].shift(1))
+        & (df["rsi"] < df["rsi"].shift(-1))
+        & (df["rsi"].shift(-1) < df["rsi"].shift(-2))
+        & (df["rsi"].shift(1) < df["rsi"].shift(2))
     ]
 
     # 변수들
@@ -113,8 +125,8 @@ def is_divergence(df: pd.DataFrame) -> list:
     bearish = False
 
     # bullish
-    if last_index == (last_index_price_max + 1) and last_index == (
-        last_index_rsi_max + 1
+    if last_index == (last_index_price_max + 2) and last_index == (
+        last_index_rsi_max + 2
     ):
         if (
             last_price_max - last_two_price_max > 0
@@ -122,8 +134,8 @@ def is_divergence(df: pd.DataFrame) -> list:
         ):
             bullish = True
     # bearish
-    elif last_index == (last_index_price_min + 1) and last_index == (
-        last_index_rsi_min + 1
+    elif last_index == (last_index_price_min + 2) and last_index == (
+        last_index_rsi_min + 2
     ):
         if (
             last_price_min - last_two_price_min < 0
