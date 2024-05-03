@@ -66,7 +66,7 @@ async def wait_until_next_interval(interval):
 # 소수점 세 자리까지 포맷
 def format_quantity(value, symbol):
     if symbol == "SOLUSDT":
-        formatted_result = math.floor(value)
+        formatted_result = int(round(value, 0))
     else:
-        formatted_result = math.floor(value * 1000) / 1000
+        formatted_result = round(value, 3)
     return formatted_result

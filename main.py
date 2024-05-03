@@ -137,6 +137,7 @@ async def main(symbol, leverage, interval):
                 divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
                 remainder = positionAmt - 2 * value
+                remainder = format_quantity(remainder, symbol)
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
@@ -155,6 +156,7 @@ async def main(symbol, leverage, interval):
                 divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
                 remainder = positionAmt - 2 * value
+                remainder = format_quantity(remainder, symbol)
                 quantities.append(value)
                 quantities.append(remainder)
                 quantities.append(value)
