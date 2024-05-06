@@ -23,8 +23,8 @@ def cal_coefficient(data: pd.DataFrame):
     std_avg_price_change = df["avg_price_change"].std()
 
     # 평균+n*표준편차 및 평균+m*표준편차 값 계산
-    plus_breakthrough = mean_avg_price_change + 1.2 * std_avg_price_change
-    minus_breakthrough = mean_avg_price_change - 1.2 * std_avg_price_change
+    plus_breakthrough = mean_avg_price_change + 1.12 * std_avg_price_change
+    minus_breakthrough = mean_avg_price_change - 1.12 * std_avg_price_change
 
     return [plus_breakthrough, minus_breakthrough]
 
