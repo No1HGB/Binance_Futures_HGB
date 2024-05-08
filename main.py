@@ -15,6 +15,7 @@ from logic import (
     check_short,
     calculate_values,
     is_divergence,
+    cal_stop_price,
 )
 from account import (
     get_position,
@@ -70,7 +71,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = last_row["low"]
+                stopPrice = cal_stop_price(last_row, "BUY", symbol)
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -88,7 +89,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = last_row["high"]
+                stopPrice = cal_stop_price(last_row, "SELL", symbol)
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -104,7 +105,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = last_row["low"]
+                stopPrice = cal_stop_price(last_row, "BUY", symbol)
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -120,7 +121,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = last_row["high"]
+                stopPrice = cal_stop_price(last_row, "SELL", symbol)
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 

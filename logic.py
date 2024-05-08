@@ -140,3 +140,25 @@ def is_divergence(df: pd.DataFrame) -> list:
             bullish = True
 
     return [bullish, bearish]
+
+
+def cal_stop_price(last_row, side, symbol):
+    if symbol == "SOLUSDT":
+        criteria = 0.5
+    else:
+        criteria = 0.3
+
+    price_change = abs(last_row["close"] - last_row["open"]) / last_row["open"] * 100
+
+    if side == "BUY":
+        if price_change < criteria:
+            stopPrice = last_row["low"]
+        else:
+            stopPrice = min(last_row["open"], last_row["close"])
+    else:
+        if price_change < criteria:
+            stopPrice = last_row["high"]
+        else:
+            stopPrice = max(last_row["open"], last_row["close"])
+
+    return stopPrice
