@@ -144,9 +144,9 @@ def is_divergence(df: pd.DataFrame) -> list:
 
 def cal_stop_price(last_row, side, symbol):
     if symbol == "SOLUSDT":
-        criteria = 0.7
+        criteria = 1.2
     else:
-        criteria = 0.5
+        criteria = 0.9
 
     price_change = abs(last_row["close"] - last_row["open"]) / last_row["open"] * 100
 
