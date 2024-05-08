@@ -13,10 +13,12 @@ def check_long(data: pd.DataFrame) -> bool:
 
     last_four = data.tail(4)
     if last_four.iloc[-1]["close"] > last_four.iloc[-1]["open"]:
+        last_ema_diff = last_four.iloc[-3]["EMA10"] - last_four.iloc[-3]["EMA20"]
         previous_ema_diff = last_four.iloc[-2]["EMA10"] - last_four.iloc[-2]["EMA20"]
         recent_ema_diff = last_four.iloc[-1]["EMA10"] - last_four.iloc[-1]["EMA20"]
         return (
             (recent_ema_diff > previous_ema_diff)
+            & (recent_ema_diff > last_ema_diff)
             & (last_four.iloc[-1]["up"] > last_four.iloc[-2]["up"])
             & (last_four.iloc[-1]["up"] > last_four.iloc[-3]["up"])
             & (last_four.iloc[-1]["up"] > last_four.iloc[-4]["up"])
@@ -30,10 +32,12 @@ def check_short(data: pd.DataFrame) -> bool:
 
     last_four = data.tail(4)
     if last_four.iloc[-1]["close"] < last_four.iloc[-1]["open"]:
+        last_ema_diff = last_four.iloc[-3]["EMA20"] - last_four.iloc[-3]["EMA10"]
         previous_ema_diff = last_four.iloc[-2]["EMA20"] - last_four.iloc[-2]["EMA10"]
         recent_ema_diff = last_four.iloc[-1]["EMA20"] - last_four.iloc[-1]["EMA10"]
         return (
             (recent_ema_diff > previous_ema_diff)
+            & (recent_ema_diff > last_ema_diff)
             & (last_four.iloc[-1]["down"] < last_four.iloc[-2]["down"])
             & (last_four.iloc[-1]["down"] < last_four.iloc[-3]["down"])
             & (last_four.iloc[-1]["down"] < last_four.iloc[-4]["down"])
