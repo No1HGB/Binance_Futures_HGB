@@ -8,69 +8,65 @@ def calculate_ema(data: pd.DataFrame, days, smoothing=2):
     return data["close"].ewm(alpha=alpha, adjust=False).mean()
 
 
-# delta, diff, breakthrough 값 계산
-def cal_coefficient(data: pd.DataFrame):
-    df = data.copy()
-    df["avg_price"] = (df["open"] + df["close"]) / 2
-
-    df["avg_price_change"] = df["avg_price"].pct_change() * 100
-
-    # Drop the first NaN value after computing percent change
-    df = df.dropna()
-
-    # 평균과 표준편차 계산
-    mean_avg_price_change = df["avg_price_change"].mean()
-    std_avg_price_change = df["avg_price_change"].std()
-
-    # 평균+n*표준편차 및 평균+m*표준편차 값 계산
-    plus_breakthrough = mean_avg_price_change + 1.12 * std_avg_price_change
-    minus_breakthrough = mean_avg_price_change - 1.12 * std_avg_price_change
-
-    return [plus_breakthrough, minus_breakthrough]
-
-
 # 롱 진입 근거(돌파) 확인
 def check_long(data: pd.DataFrame) -> bool:
-    [plus_breakthrough, minus_breakthrough] = cal_coefficient(data)
 
-    last_two = data.tail(2)
-    if last_two.iloc[-1]["close"] > last_two.iloc[-1]["open"]:
-        previous_avg = (last_two.iloc[-2]["open"] + last_two.iloc[-2]["close"]) / 2
-        recent_avg = (last_two.iloc[-1]["open"] + last_two.iloc[-1]["close"]) / 2
-        return (recent_avg - previous_avg) / previous_avg * 100 >= plus_breakthrough
+    last_four = data.tail(4)
+    if last_four.iloc[-1]["close"] > last_four.iloc[-1]["open"]:
+        previous_ema_diff = last_four.iloc[-2]["EMA10"] - last_four.iloc[-2]["EMA20"]
+        recent_ema_diff = last_four.iloc[-1]["EMA10"] - last_four.iloc[-1]["EMA20"]
+        return (
+            (recent_ema_diff > previous_ema_diff)
+            & (last_four.iloc[-1]["up"] > last_four.iloc[-2]["up"])
+            & (last_four.iloc[-1]["up"] > last_four.iloc[-3]["up"])
+            & (last_four.iloc[-1]["up"] > last_four.iloc[-4]["up"])
+        )
 
     return False
 
 
 # 숏 진입 근거(돌파) 확인
 def check_short(data: pd.DataFrame) -> bool:
-    [plus_breakthrough, minus_breakthrough] = cal_coefficient(data)
 
-    last_two = data.tail(2)
-    if last_two.iloc[-1]["close"] < last_two.iloc[-1]["open"]:
-        previous_avg = (last_two.iloc[-2]["open"] + last_two.iloc[-2]["close"]) / 2
-        recent_avg = (last_two.iloc[-1]["open"] + last_two.iloc[-1]["close"]) / 2
-        return (recent_avg - previous_avg) / previous_avg * 100 <= minus_breakthrough
+    last_four = data.tail(4)
+    if last_four.iloc[-1]["close"] < last_four.iloc[-1]["open"]:
+        previous_ema_diff = last_four.iloc[-2]["EMA20"] - last_four.iloc[-2]["EMA10"]
+        recent_ema_diff = last_four.iloc[-1]["EMA20"] - last_four.iloc[-1]["EMA10"]
+        return (
+            (recent_ema_diff > previous_ema_diff)
+            & (last_four.iloc[-1]["down"] < last_four.iloc[-2]["down"])
+            & (last_four.iloc[-1]["down"] < last_four.iloc[-3]["down"])
+            & (last_four.iloc[-1]["down"] < last_four.iloc[-4]["down"])
+        )
 
     return False
 
 
 # RSI 계산
-def calculate_rsi(df: pd.DataFrame) -> pd.DataFrame:
-    # RSI 계산
+def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
+    # 원본 DataFrame을 변경하지 않기 위해 복사본을 사용
+    temp_df = df.copy()
+
     # 가격 변동 계산
-    df["delta"] = df["close"] - df["close"].shift(1)
+    temp_df["delta"] = temp_df["close"] - temp_df["close"].shift(1)
 
     # 이익과 손실 분리
-    df["gain"] = np.where(df["delta"] >= 0, df["delta"], 0)
-    df["loss"] = np.where(df["delta"] < 0, df["delta"].abs(), 0)
+    temp_df["gain"] = np.where(temp_df["delta"] >= 0, temp_df["delta"], 0)
+    temp_df["loss"] = np.where(temp_df["delta"] < 0, temp_df["delta"].abs(), 0)
 
     # 평균 이익과 손실 계산
-    df["avg_gain"] = df["gain"].ewm(alpha=1 / 14, min_periods=14).mean()
-    df["avg_loss"] = df["loss"].ewm(alpha=1 / 14, min_periods=14).mean()
+    temp_df["avg_gain"] = temp_df["gain"].ewm(alpha=1 / 14, min_periods=14).mean()
+    temp_df["avg_loss"] = temp_df["loss"].ewm(alpha=1 / 14, min_periods=14).mean()
 
     # RSI 계산
-    df["rsi"] = df["avg_gain"] / (df["avg_gain"] + df["avg_loss"]) * 100
+    temp_df["rsi"] = (
+        temp_df["avg_gain"] / (temp_df["avg_gain"] + temp_df["avg_loss"]) * 100
+    )
+
+    # 원래 DataFrame에 'rsi', 'up', 'down' 추가
+    df["rsi"] = temp_df["rsi"]
+    df["up"] = np.maximum(df["open"], df["close"])
+    df["down"] = np.minimum(df["open"], df["close"])
 
     return df
 

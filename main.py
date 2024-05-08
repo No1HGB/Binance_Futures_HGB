@@ -13,7 +13,7 @@ from logic import (
     calculate_ema,
     check_long,
     check_short,
-    calculate_rsi,
+    calculate_values,
     is_divergence,
 )
 from account import (
@@ -48,7 +48,7 @@ async def main(symbol, leverage, interval):
         data["EMA10"] = calculate_ema(data, 10)
         data["EMA20"] = calculate_ema(data, 20)
         data["EMA50"] = calculate_ema(data, 50)
-        data = calculate_rsi(data)
+        data = calculate_values(data)
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
@@ -69,8 +69,8 @@ async def main(symbol, leverage, interval):
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
 
-                price = max(last_row["close"], last_row["open"])
-                stopPrice = min(last_row["close"], last_row["open"])
+                price = last_row["close"]
+                stopPrice = last_row["low"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -87,8 +87,8 @@ async def main(symbol, leverage, interval):
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
 
-                price = min(last_row["close"], last_row["open"])
-                stopPrice = max(last_row["close"], last_row["open"])
+                price = last_row["close"]
+                stopPrice = last_row["high"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -103,8 +103,8 @@ async def main(symbol, leverage, interval):
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
 
-                price = max(last_row["close"], last_row["open"])
-                stopPrice = min(last_row["close"], last_row["open"])
+                price = last_row["close"]
+                stopPrice = last_row["low"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -119,8 +119,8 @@ async def main(symbol, leverage, interval):
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
 
-                price = min(last_row["close"], last_row["open"])
-                stopPrice = max(last_row["close"], last_row["open"])
+                price = last_row["close"]
+                stopPrice = last_row["high"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -134,13 +134,12 @@ async def main(symbol, leverage, interval):
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 3
+                divide = positionAmt / 2
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - 2 * value
+                remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
                 quantities.append(value)
                 quantities.append(remainder)
-                quantities.append(value)
                 # 버그 수정을 위한 로그 기록
                 logging.info(f"value:{value} / remainder:{remainder}")
             if quantities[0] > 0:
@@ -153,13 +152,12 @@ async def main(symbol, leverage, interval):
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 3
+                divide = positionAmt / 2
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - 2 * value
+                remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
                 quantities.append(value)
                 quantities.append(remainder)
-                quantities.append(value)
                 # 버그 수정을 위한 로그 기록
                 logging.info(f"value:{value} / remainder:{remainder}")
             if quantities[0] > 0:
