@@ -100,7 +100,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} trend short position open")
 
             # 역추세 롱
-            elif bullish and volume < volume_MA:
+            elif bullish:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -116,7 +116,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} reverse long position open")
 
             # 역추세 숏
-            elif bearish and volume < volume_MA:
+            elif bearish:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")

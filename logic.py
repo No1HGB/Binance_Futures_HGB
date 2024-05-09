@@ -132,14 +132,23 @@ def is_divergence(df: pd.DataFrame) -> list:
     bearish = False
 
     # bullish
-    if last_price_max - last_two_price_max > 0 and last_rsi_max - last_two_rsi_max < 0:
-        bearish = True
-
-    # bearish
-    elif (
-        last_price_min - last_two_price_min < 0 and last_rsi_min - last_two_rsi_min > 0
+    if last_index == (last_index_price_max + 2) and last_index == (
+        last_index_rsi_max + 2
     ):
-        bullish = True
+        if (
+            last_price_max - last_two_price_max > 0
+            and last_rsi_max - last_two_rsi_max < 0
+        ):
+            bearish = True
+    # bearish
+    elif last_index == (last_index_price_min + 2) and last_index == (
+        last_index_rsi_min + 2
+    ):
+        if (
+            last_price_min - last_two_price_min < 0
+            and last_rsi_min - last_two_rsi_min > 0
+        ):
+            bullish = True
 
     return [bullish, bearish]
 
