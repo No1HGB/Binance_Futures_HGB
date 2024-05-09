@@ -55,12 +55,13 @@ async def main(symbol, leverage, interval):
         positionAmt = float(position["positionAmt"])
 
         [balance, available] = await get_balance(key, secret)
+        [bullish, bearish] = is_divergence(data)
+        last_row = data.iloc[-1]
+        volume = last_row["volume"]
+        volume_MA = last_row["volume_MA"] * 1.1
 
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
-
-            last_row = data.iloc[-1]
-            [bullish, bearish] = is_divergence(data)
 
             # 추세 롱
             if last_row["EMA10"] > last_row["EMA20"] > last_row["EMA50"] and check_long(
@@ -99,7 +100,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} trend short position open")
 
             # 역추세 롱
-            elif bullish == True:
+            elif bullish and volume < volume_MA:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -115,7 +116,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} reverse long position open")
 
             # 역추세 숏
-            elif bearish == True:
+            elif bearish and volume < volume_MA:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -130,8 +131,10 @@ async def main(symbol, leverage, interval):
                 )
                 logging.info(f"{symbol} {interval} reverse short position open")
 
-        # 해당 포지션이 있는 경우, 매 시간마다 1/3씩 포지션 종료
+        # 해당 포지션이 있는 경우, 일부 포지션 종료
         elif positionAmt > 0:
+
+            # quantity 담는 로직
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
@@ -141,14 +144,16 @@ async def main(symbol, leverage, interval):
                 remainder = format_quantity(remainder, symbol)
                 quantities.append(value)
                 quantities.append(remainder)
-                # 버그 수정을 위한 로그 기록
                 logging.info(f"value:{value} / remainder:{remainder}")
-            if quantities[0] > 0:
+
+            if quantities[0] > 0 and volume >= volume_MA:
                 await tp_sl(key, secret, symbol, "SELL", quantities[0])
+                quantities.pop(0)
                 logging.info(f"{symbol} {interval} long position close {quantities[0]}")
-            quantities.pop(0)
 
         elif positionAmt < 0:
+
+            # quantity 담는 로직
             positionAmt = -positionAmt
             if not quantities:
                 if symbol == "SOLUSDT":
@@ -159,14 +164,14 @@ async def main(symbol, leverage, interval):
                 remainder = format_quantity(remainder, symbol)
                 quantities.append(value)
                 quantities.append(remainder)
-                # 버그 수정을 위한 로그 기록
                 logging.info(f"value:{value} / remainder:{remainder}")
-            if quantities[0] > 0:
+
+            if quantities[0] > 0 and volume >= volume_MA:
                 await tp_sl(key, secret, symbol, "BUY", quantities[0])
+                quantities.pop(0)
                 logging.info(
                     f"{symbol} {interval} short position close {quantities[0]}"
                 )
-            quantities.pop(0)
 
 
 symbols = Config.symbols

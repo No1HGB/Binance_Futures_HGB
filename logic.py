@@ -15,11 +15,16 @@ def check_long(data: pd.DataFrame) -> bool:
     if last_four.iloc[-1]["close"] > last_four.iloc[-1]["open"]:
         previous_ema_diff = last_four.iloc[-2]["EMA10"] - last_four.iloc[-2]["EMA20"]
         recent_ema_diff = last_four.iloc[-1]["EMA10"] - last_four.iloc[-1]["EMA20"]
+
+        volume = last_four.iloc[-1]["volume"]
+        volume_MA = last_four.iloc[-1]["volume_MA"] * 1.1
+
         return (
             (recent_ema_diff > previous_ema_diff)
             & (last_four.iloc[-1]["up"] > last_four.iloc[-2]["up"])
             & (last_four.iloc[-1]["up"] > last_four.iloc[-3]["up"])
             & (last_four.iloc[-1]["up"] > last_four.iloc[-4]["up"])
+            & (volume < volume_MA)
         )
 
     return False
@@ -32,11 +37,16 @@ def check_short(data: pd.DataFrame) -> bool:
     if last_four.iloc[-1]["close"] < last_four.iloc[-1]["open"]:
         previous_ema_diff = last_four.iloc[-2]["EMA20"] - last_four.iloc[-2]["EMA10"]
         recent_ema_diff = last_four.iloc[-1]["EMA20"] - last_four.iloc[-1]["EMA10"]
+
+        volume = last_four.iloc[-1]["volume"]
+        volume_MA = last_four.iloc[-1]["volume_MA"] * 1.1
+
         return (
             (recent_ema_diff > previous_ema_diff)
             & (last_four.iloc[-1]["down"] < last_four.iloc[-2]["down"])
             & (last_four.iloc[-1]["down"] < last_four.iloc[-3]["down"])
             & (last_four.iloc[-1]["down"] < last_four.iloc[-4]["down"])
+            & (volume < volume_MA)
         )
 
     return False
@@ -63,10 +73,11 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
         temp_df["avg_gain"] / (temp_df["avg_gain"] + temp_df["avg_loss"]) * 100
     )
 
-    # 원래 DataFrame에 'rsi', 'up', 'down' 추가
+    # 원래 DataFrame에 'rsi', 'up', 'down', "volume_MA" 추가
     df["rsi"] = temp_df["rsi"]
     df["up"] = np.maximum(df["open"], df["close"])
     df["down"] = np.minimum(df["open"], df["close"])
+    df["volume_MA"] = df["volume"].rolling(window=50).mean()
 
     return df
 
@@ -121,23 +132,14 @@ def is_divergence(df: pd.DataFrame) -> list:
     bearish = False
 
     # bullish
-    if last_index == (last_index_price_max + 2) and last_index == (
-        last_index_rsi_max + 2
-    ):
-        if (
-            last_price_max - last_two_price_max > 0
-            and last_rsi_max - last_two_rsi_max < 0
-        ):
-            bearish = True
+    if last_price_max - last_two_price_max > 0 and last_rsi_max - last_two_rsi_max < 0:
+        bearish = True
+
     # bearish
-    elif last_index == (last_index_price_min + 2) and last_index == (
-        last_index_rsi_min + 2
+    elif (
+        last_price_min - last_two_price_min < 0 and last_rsi_min - last_two_rsi_min > 0
     ):
-        if (
-            last_price_min - last_two_price_min < 0
-            and last_rsi_min - last_two_rsi_min > 0
-        ):
-            bullish = True
+        bullish = True
 
     return [bullish, bearish]
 
