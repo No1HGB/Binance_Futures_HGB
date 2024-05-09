@@ -58,7 +58,10 @@ async def main(symbol, leverage, interval):
         [bullish, bearish] = is_divergence(data)
         last_row = data.iloc[-1]
         volume = last_row["volume"]
-        volume_MA = last_row["volume_MA"] * 1.1
+        if symbol == "BTCUSDT":
+            volume_MA = last_row["volume_MA"] * 1.1
+        else:
+            volume_MA = last_row["volume_MA"]
 
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
