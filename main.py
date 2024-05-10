@@ -145,8 +145,8 @@ async def main(symbol, leverage, interval):
                 value = format_quantity(divide, symbol)
                 remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
-                quantities.append(value)
                 quantities.append(remainder)
+                quantities.append(value)
                 logging.info(f"value:{value} / remainder:{remainder}")
 
             if quantities[0] > 0 and volume >= volume_MA:
@@ -165,8 +165,8 @@ async def main(symbol, leverage, interval):
                 value = format_quantity(divide, symbol)
                 remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
-                quantities.append(value)
                 quantities.append(remainder)
+                quantities.append(value)
                 logging.info(f"value:{value} / remainder:{remainder}")
 
             if quantities[0] > 0 and volume >= volume_MA:
