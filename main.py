@@ -145,9 +145,11 @@ async def main(symbol, leverage, interval):
                 value = format_quantity(divide, symbol)
                 remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
-                quantities.append(remainder)
-                quantities.append(value)
-                logging.info(f"value:{value} / remainder:{remainder}")
+                if remainder > 0:
+                    quantities.append(remainder)
+                if value > 0:
+                    quantities.append(value)
+                logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0 and volume >= volume_MA:
                 await tp_sl(key, secret, symbol, "SELL", quantities[0])
@@ -165,9 +167,11 @@ async def main(symbol, leverage, interval):
                 value = format_quantity(divide, symbol)
                 remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
-                quantities.append(remainder)
-                quantities.append(value)
-                logging.info(f"value:{value} / remainder:{remainder}")
+                if remainder > 0:
+                    quantities.append(remainder)
+                if value > 0:
+                    quantities.append(value)
+                logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0 and volume >= volume_MA:
                 await tp_sl(key, secret, symbol, "BUY", quantities[0])
