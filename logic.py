@@ -156,9 +156,7 @@ def is_divergence(df: pd.DataFrame) -> list:
 def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
 
     entry_minus_stop_abs = (
-        (balance * 1.5 / 100 - positionAmt * 0.002 / 100)
-        / (positionAmt * 100)
-        * entryPrice
+        (balance * 1.5 / 100 - positionAmt * 0.002 / 100) / positionAmt * entryPrice
     )
 
     if side == "BUY":
