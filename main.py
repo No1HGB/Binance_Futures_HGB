@@ -163,8 +163,8 @@ async def main(symbol, leverage, interval):
             if quantities[0] > 0 and volume >= volume_MA:
                 price = last_row["close"]
                 await tp_sl(key, secret, symbol, "SELL", quantities[0], price)
-                quantities.pop(0)
                 logging.info(f"{symbol} {interval} long position close {quantities[0]}")
+                quantities.pop(0)
 
         elif positionAmt < 0:
 
@@ -186,10 +186,10 @@ async def main(symbol, leverage, interval):
             if quantities[0] > 0 and volume >= volume_MA:
                 price = last_row["close"]
                 await tp_sl(key, secret, symbol, "BUY", quantities[0], price)
-                quantities.pop(0)
                 logging.info(
                     f"{symbol} {interval} short position close {quantities[0]}"
                 )
+                quantities.pop(0)
 
 
 symbols = Config.symbols
