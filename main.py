@@ -53,7 +53,6 @@ async def main(symbol, leverage, interval):
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
-        entryPrice = float(position["entryPrice"])
 
         [balance, available] = await get_balance(key, secret)
         [bullish, bearish] = is_divergence(data)
@@ -76,11 +75,10 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(
-                    entryPrice, "BUY", symbol, positionAmt, balance
-                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -96,11 +94,10 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(
-                    entryPrice, "SELL", symbol, positionAmt, balance
-                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
@@ -114,11 +111,10 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(
-                    entryPrice, "BUY", symbol, positionAmt, balance
-                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
 
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
@@ -132,11 +128,10 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(
-                    entryPrice, "SELL", symbol, positionAmt, balance
-                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
 
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
@@ -202,7 +197,6 @@ async def run_multiple_tasks():
     await asyncio.gather(
         main(symbols[0], leverages[0], interval),
         main(symbols[1], leverages[1], interval),
-        main(symbols[2], leverages[2], interval),
     )
 
 
