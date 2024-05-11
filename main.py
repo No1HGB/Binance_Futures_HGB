@@ -53,6 +53,7 @@ async def main(symbol, leverage, interval):
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
+        entryPrice = float(position["entryPrice"])
 
         [balance, available] = await get_balance(key, secret)
         [bullish, bearish] = is_divergence(data)
@@ -75,7 +76,9 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(last_row, "BUY", symbol)
+                stopPrice = cal_stop_price(
+                    entryPrice, "BUY", symbol, positionAmt, balance
+                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -93,7 +96,9 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(last_row, "SELL", symbol)
+                stopPrice = cal_stop_price(
+                    entryPrice, "SELL", symbol, positionAmt, balance
+                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -109,7 +114,9 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(last_row, "BUY", symbol)
+                stopPrice = cal_stop_price(
+                    entryPrice, "BUY", symbol, positionAmt, balance
+                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -125,7 +132,9 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
-                stopPrice = cal_stop_price(last_row, "SELL", symbol)
+                stopPrice = cal_stop_price(
+                    entryPrice, "SELL", symbol, positionAmt, balance
+                )
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
 
@@ -152,7 +161,8 @@ async def main(symbol, leverage, interval):
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0 and volume >= volume_MA:
-                await tp_sl(key, secret, symbol, "SELL", quantities[0])
+                price = last_row["close"]
+                await tp_sl(key, secret, symbol, "SELL", quantities[0], price)
                 quantities.pop(0)
                 logging.info(f"{symbol} {interval} long position close {quantities[0]}")
 
@@ -174,7 +184,8 @@ async def main(symbol, leverage, interval):
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0 and volume >= volume_MA:
-                await tp_sl(key, secret, symbol, "BUY", quantities[0])
+                price = last_row["close"]
+                await tp_sl(key, secret, symbol, "BUY", quantities[0], price)
                 quantities.pop(0)
                 logging.info(
                     f"{symbol} {interval} short position close {quantities[0]}"

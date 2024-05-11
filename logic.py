@@ -153,23 +153,25 @@ def is_divergence(df: pd.DataFrame) -> list:
     return [bullish, bearish]
 
 
-def cal_stop_price(last_row, side, symbol):
-    if symbol == "SOLUSDT":
-        criteria = 1.2
-    else:
-        criteria = 0.9
+def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
 
-    price_change = abs(last_row["close"] - last_row["open"]) / last_row["open"] * 100
+    stop_minus_entry_abs = (
+        (balance * 1.5 / 100 - positionAmt * 0.002 / 100)
+        / (positionAmt * 100)
+        * entryPrice
+    )
 
     if side == "BUY":
-        if price_change < criteria:
-            stopPrice = last_row["low"]
-        else:
-            stopPrice = min(last_row["open"], last_row["close"])
-    else:
-        if price_change < criteria:
-            stopPrice = last_row["high"]
-        else:
-            stopPrice = max(last_row["open"], last_row["close"])
+        stopPrice = entryPrice + stop_minus_entry_abs
+
+    elif side == "SELL":
+        stopPrice = entryPrice - stop_minus_entry_abs
+
+    if symbol == "BTCUSDT":
+        stopPrice = round(stopPrice, 1)
+    elif symbol == "ETHUSDT":
+        stopPrice = round(stopPrice, 2)
+    elif symbol == "SOLUSDT":
+        stopPrice = round(stopPrice, 3)
 
     return stopPrice

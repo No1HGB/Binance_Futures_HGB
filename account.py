@@ -84,9 +84,10 @@ async def open_position(
         um_futures_client.new_order,
         symbol=symbol,
         side=stopSide,
-        type="STOP_MARKET",
+        type="STOP",
+        quantity=quantity,
+        price=stopPrice,
         stopPrice=stopPrice,
-        closePosition="true",
     )
     try:
         await loop.run_in_executor(None, func_open)
@@ -101,15 +102,17 @@ async def open_position(
         logging.error(f"Unexpected error occurred(open_position){symbol}: {error}")
 
 
-async def tp_sl(key, secret, symbol, side, quantity):
+async def tp_sl(key, secret, symbol, side, quantity, price):
     loop = asyncio.get_running_loop()
     um_futures_client = UMFutures(key=key, secret=secret)
     func = partial(
         um_futures_client.new_order,
         symbol=symbol,
         side=side,
-        type="MARKET",
+        type="LIMIT",
         quantity=quantity,
+        timeInForce="GTC",
+        price=price,
         reduceOnly="true",
     )
     try:

@@ -9,4 +9,4 @@ secret = os.getenv("SECRET")
 symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 leverages = [5, 5, 3]
 interval = "1h"  # 1h,4h,1d
-ratio = 25  # margin ratio per balance (%)
+ratio = 20  # margin ratio per balance (%)
