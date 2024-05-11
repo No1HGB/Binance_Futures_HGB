@@ -116,11 +116,11 @@ def is_divergence(df: pd.DataFrame) -> list:
     last_index = df.index[-1]
 
     # 가격 극값 인덱스 RSI 기준으로 통일
-    if price_max_peaks["open"] > price_max_peaks["close"]:
+    if price_max_peaks.iloc[-1]["open"] > price_max_peaks.iloc[-1]["close"]:
         last_index_price_max = price_max_peaks.index[-1] - 1
     else:
         last_index_price_max = price_max_peaks.index[-1]
-    if price_min_troughs["open"] < price_max_peaks["close"]:
+    if price_min_troughs.iloc[-1]["open"] < price_max_peaks.iloc[-1]["close"]:
         last_index_price_min = price_min_troughs.index[-1] - 1
     else:
         last_index_price_min = price_min_troughs.index[-1]
