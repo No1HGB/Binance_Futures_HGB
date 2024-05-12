@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import Config
 
 
 # EMA 계산
@@ -173,9 +174,12 @@ def is_divergence(df: pd.DataFrame) -> list:
 
 
 def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
+    stop_ratio = Config.stop_ratio
 
     entry_minus_stop_abs = (
-        (balance * 1.5 / 100 - positionAmt * 0.002 / 100) / positionAmt * entryPrice
+        (balance * stop_ratio / 100 - positionAmt * 0.002 / 100)
+        / positionAmt
+        * entryPrice
     )
 
     if side == "BUY":

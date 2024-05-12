@@ -85,44 +85,8 @@ async def main(symbol, leverage, interval):
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
 
-            # 추세 롱
-            if trend_long:
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
-
-                await open_position(
-                    key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
-                )
-                state = State.TREND_LONG
-                logging.info(f"{symbol} {interval} trend long position open")
-
-            # 추세 숏
-            elif trend_short:
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
-
-                await open_position(
-                    key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
-                )
-                state = State.TREND_SHORT
-                logging.info(f"{symbol} {interval} trend short position open")
-
             # 역추세 롱
-            elif bullish:
+            if bullish:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -156,6 +120,42 @@ async def main(symbol, leverage, interval):
                 )
                 state = State.REVERSE_SHORT
                 logging.info(f"{symbol} {interval} reverse short position open")
+
+            # 추세 롱
+            elif trend_long:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
+                price = last_row["close"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
+
+                await open_position(
+                    key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
+                )
+                state = State.TREND_LONG
+                logging.info(f"{symbol} {interval} trend long position open")
+
+            # 추세 숏
+            elif trend_short:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
+                price = last_row["close"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
+
+                await open_position(
+                    key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
+                )
+                state = State.TREND_SHORT
+                logging.info(f"{symbol} {interval} trend short position open")
 
         # 해당 포지션이 있는 경우, 일부 포지션 종료
         elif positionAmt > 0:
