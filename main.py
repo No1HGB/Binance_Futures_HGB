@@ -187,6 +187,7 @@ async def main(symbol, leverage, interval):
                     )
                     quantities.pop(0)
                     if not quantities:
+                        await cancel_orders(key, secret, symbol)
                         state = State.NONE
 
         elif positionAmt < 0:
@@ -219,6 +220,7 @@ async def main(symbol, leverage, interval):
                     )
                     quantities.pop(0)
                     if not quantities:
+                        await cancel_orders(key, secret, symbol)
                         state = State.NONE
 
 
