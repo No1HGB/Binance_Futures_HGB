@@ -17,15 +17,11 @@ def check_long(data: pd.DataFrame) -> bool:
         previous_ema_diff = last_four.iloc[-2]["EMA10"] - last_four.iloc[-2]["EMA20"]
         recent_ema_diff = last_four.iloc[-1]["EMA10"] - last_four.iloc[-1]["EMA20"]
 
-        volume = last_four.iloc[-1]["volume"]
-        volume_MA = last_four.iloc[-1]["volume_MA"] * 1.1
-
         return (
             (recent_ema_diff > previous_ema_diff)
             & (last_four.iloc[-1]["up"] > last_four.iloc[-2]["up"])
             & (last_four.iloc[-1]["up"] > last_four.iloc[-3]["up"])
             & (last_four.iloc[-1]["up"] > last_four.iloc[-4]["up"])
-            & (volume < volume_MA)
         )
 
     return False
@@ -39,15 +35,11 @@ def check_short(data: pd.DataFrame) -> bool:
         previous_ema_diff = last_four.iloc[-2]["EMA20"] - last_four.iloc[-2]["EMA10"]
         recent_ema_diff = last_four.iloc[-1]["EMA20"] - last_four.iloc[-1]["EMA10"]
 
-        volume = last_four.iloc[-1]["volume"]
-        volume_MA = last_four.iloc[-1]["volume_MA"] * 1.1
-
         return (
             (recent_ema_diff > previous_ema_diff)
             & (last_four.iloc[-1]["down"] < last_four.iloc[-2]["down"])
             & (last_four.iloc[-1]["down"] < last_four.iloc[-3]["down"])
             & (last_four.iloc[-1]["down"] < last_four.iloc[-4]["down"])
-            & (volume < volume_MA)
         )
 
     return False
