@@ -12,11 +12,12 @@ from market import (
 )
 from logic import (
     calculate_ema,
-    check_long,
-    check_short,
     calculate_values,
-    is_divergence,
     cal_stop_price,
+    reverse_long,
+    reverse_short,
+    trend_long,
+    trend_short,
 )
 from account import (
     get_position,
@@ -28,21 +29,12 @@ from account import (
 )
 
 
-class State(Enum):
-    NONE = auto()
-    TREND_LONG = auto()
-    TREND_SHORT = auto()
-    REVERSE_LONG = auto()
-    REVERSE_SHORT = auto()
-
-
 async def main(symbol, leverage, interval):
     logging.info(f"{symbol} {interval} trading program start")
     key = Config.key
     secret = Config.secret
     ratio = Config.ratio
     quantities = []
-    state = State.NONE
 
     while True:
         # 정시(+2초)까지 기다리기
@@ -56,8 +48,6 @@ async def main(symbol, leverage, interval):
         data = await fetch_data(symbol, interval)
 
         # 업데이트 후 EMA 계산, RSI 계산 및 추가
-        data["EMA10"] = calculate_ema(data, 10)
-        data["EMA20"] = calculate_ema(data, 20)
         data["EMA50"] = calculate_ema(data, 50)
         data = calculate_values(data)
 
@@ -65,28 +55,16 @@ async def main(symbol, leverage, interval):
         positionAmt = float(position["positionAmt"])
 
         [balance, available] = await get_balance(key, secret)
-        [bullish, bearish] = is_divergence(data)
 
         last_row = data.iloc[-1]
         volume = last_row["volume"]
-        if symbol == "BTCUSDT":
-            volume_MA = last_row["volume_MA"] * 1.1
-        else:
-            volume_MA = last_row["volume_MA"]
-
-        trend_long = last_row["EMA10"] > last_row["EMA20"] > last_row[
-            "EMA50"
-        ] and check_long(data)
-
-        trend_short = last_row["EMA10"] < last_row["EMA20"] < last_row[
-            "EMA50"
-        ] and check_short(data)
+        volume_MA = last_row["volume_MA"]
 
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
 
             # 역추세 롱
-            if bullish:
+            if reverse_long(data):
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -100,11 +78,10 @@ async def main(symbol, leverage, interval):
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
-                state = State.REVERSE_LONG
                 logging.info(f"{symbol} {interval} reverse long position open")
 
             # 역추세 숏
-            elif bearish:
+            elif reverse_short(data):
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -118,11 +95,10 @@ async def main(symbol, leverage, interval):
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
-                state = State.REVERSE_SHORT
                 logging.info(f"{symbol} {interval} reverse short position open")
 
             # 추세 롱
-            elif trend_long:
+            elif trend_long(data):
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -136,11 +112,10 @@ async def main(symbol, leverage, interval):
                 await open_position(
                     key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
                 )
-                state = State.TREND_LONG
                 logging.info(f"{symbol} {interval} trend long position open")
 
             # 추세 숏
-            elif trend_short:
+            elif trend_short(data):
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -154,7 +129,6 @@ async def main(symbol, leverage, interval):
                 await open_position(
                     key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
                 )
-                state = State.TREND_SHORT
                 logging.info(f"{symbol} {interval} trend short position open")
 
         # 해당 포지션이 있는 경우, 일부 포지션 종료
@@ -175,11 +149,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if (
-                    volume >= volume_MA
-                    or (state == State.TREND_LONG and bearish)
-                    or (state == State.REVERSE_LONG and trend_short)
-                ):
+                if volume >= volume_MA * 1.5 or last_row["rsi"] >= 70:
                     price = last_row["close"]
                     await tp_sl(key, secret, symbol, "SELL", quantities[0], price)
                     logging.info(
@@ -188,7 +158,6 @@ async def main(symbol, leverage, interval):
                     quantities.pop(0)
                     if not quantities:
                         await cancel_orders(key, secret, symbol)
-                        state = State.NONE
 
         elif positionAmt < 0:
 
@@ -208,11 +177,7 @@ async def main(symbol, leverage, interval):
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if (
-                    volume >= volume_MA
-                    or (state == State.TREND_SHORT and bullish)
-                    or (state == State.REVERSE_SHORT and trend_long)
-                ):
+                if volume >= volume_MA * 1.5 or last_row["rsi"] <= 30:
                     price = last_row["close"]
                     await tp_sl(key, secret, symbol, "BUY", quantities[0], price)
                     logging.info(
@@ -221,7 +186,6 @@ async def main(symbol, leverage, interval):
                     quantities.pop(0)
                     if not quantities:
                         await cancel_orders(key, secret, symbol)
-                        state = State.NONE
 
 
 symbols = Config.symbols

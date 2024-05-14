@@ -84,10 +84,9 @@ async def open_position(
         um_futures_client.new_order,
         symbol=symbol,
         side=stopSide,
-        type="STOP",
-        quantity=quantity,
-        price=stopPrice,
+        type="STOP_MARKET",
         stopPrice=stopPrice,
+        closePosition="true",
     )
     try:
         await loop.run_in_executor(None, func_open)
