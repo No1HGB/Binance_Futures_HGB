@@ -62,7 +62,7 @@ async def change_leverage(key, secret, symbol, leverage):
 
 
 async def open_position(
-    key, secret, symbol, side, quantity, price, stopSide, stopPrice
+    key, secret, symbol, side, quantity, price, stopSide, profitPrice, stopPrice
 ):
     loop = asyncio.get_running_loop()
     now_timestamp = datetime.datetime.now(datetime.UTC).timestamp() * 1000
@@ -80,6 +80,14 @@ async def open_position(
         goodTillDate=timestamp,
         price=price,
     )
+    func_tp = partial(
+        um_futures_client.new_order,
+        symbol=symbol,
+        side=stopSide,
+        type="TAKE_PROFIT_MARKET",
+        stopPrice=profitPrice,
+        closePosition="true",
+    )
     func_sl = partial(
         um_futures_client.new_order,
         symbol=symbol,
@@ -90,7 +98,7 @@ async def open_position(
     )
     try:
         await loop.run_in_executor(None, func_open)
-        # 손절로직
+        await loop.run_in_executor(None, func_tp)
         await loop.run_in_executor(None, func_sl)
 
     except ClientError as error:
@@ -101,17 +109,15 @@ async def open_position(
         logging.error(f"Unexpected error occurred(open_position){symbol}: {error}")
 
 
-async def tp_sl(key, secret, symbol, side, quantity, price):
+async def tp_sl(key, secret, symbol, side, quantity):
     loop = asyncio.get_running_loop()
     um_futures_client = UMFutures(key=key, secret=secret)
     func = partial(
         um_futures_client.new_order,
         symbol=symbol,
         side=side,
-        type="LIMIT",
+        type="MARKET",
         quantity=quantity,
-        timeInForce="GTC",
-        price=price,
         reduceOnly="true",
     )
     try:

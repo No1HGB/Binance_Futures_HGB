@@ -39,11 +39,36 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def cal_profit_price(entryPrice, side, symbol, positionAmt, balance):
+    profit_ratio = Config.profit_ratio
+
+    entry_minus_stop_abs = (
+        (balance * profit_ratio / 100 - positionAmt * 0.008 / 100)
+        / positionAmt
+        * entryPrice
+    )
+
+    if side == "BUY":
+        stopPrice = entryPrice + entry_minus_stop_abs
+
+    elif side == "SELL":
+        stopPrice = entryPrice - entry_minus_stop_abs
+
+    if symbol == "BTCUSDT":
+        stopPrice = round(stopPrice, 1)
+    elif symbol == "ETHUSDT":
+        stopPrice = round(stopPrice, 2)
+    elif symbol == "SOLUSDT":
+        stopPrice = round(stopPrice, 3)
+
+    return stopPrice
+
+
 def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
     stop_ratio = Config.stop_ratio
 
     entry_minus_stop_abs = (
-        (balance * stop_ratio / 100 - positionAmt * 0.004 / 100)
+        (balance * stop_ratio / 100 - positionAmt * 0.008 / 100)
         / positionAmt
         * entryPrice
     )
@@ -102,8 +127,10 @@ def reverse_short(data: pd.DataFrame) -> bool:
 
 # 추세 롱
 def trend_long(data: pd.DataFrame) -> bool:
-
     last_oct = data.tail(8)
+    volume = data.iloc[-1]["volume"]
+    volume_MA = data.iloc[-1]["volume_MA"]
+
     if (
         last_oct.iloc[-1]["close"] > last_oct.iloc[-1]["open"]
         and last_oct.iloc[-1]["open"] > last_oct.iloc[-1]["EMA50"]
@@ -112,8 +139,9 @@ def trend_long(data: pd.DataFrame) -> bool:
 
         return (
             last_oct.iloc[-1]["close"] > pre_max_value
-            and last_oct.iloc[-1]["rsi"] >= 35
-            and last_oct.iloc[-1]["rsi"] <= 65
+            and volume >= volume_MA * 1.5
+            and last_oct.iloc[-1]["rsi"] >= 30
+            and last_oct.iloc[-1]["rsi"] <= 70
         )
 
     return False
@@ -121,8 +149,10 @@ def trend_long(data: pd.DataFrame) -> bool:
 
 # 추세 숏
 def trend_short(data: pd.DataFrame) -> bool:
-
     last_oct = data.tail(8)
+    volume = data.iloc[-1]["volume"]
+    volume_MA = data.iloc[-1]["volume_MA"]
+
     if (
         last_oct.iloc[-1]["close"] < last_oct.iloc[-1]["open"]
         and last_oct.iloc[-1]["open"] < last_oct.iloc[-1]["EMA50"]
@@ -131,8 +161,9 @@ def trend_short(data: pd.DataFrame) -> bool:
 
         return (
             last_oct.iloc[-1]["close"] < pre_min_value
-            and last_oct.iloc[-1]["rsi"] >= 35
-            and last_oct.iloc[-1]["rsi"] <= 65
+            and volume >= volume_MA * 1.5
+            and last_oct.iloc[-1]["rsi"] >= 30
+            and last_oct.iloc[-1]["rsi"] <= 70
         )
 
     return False

@@ -1,5 +1,4 @@
 import logging, asyncio
-from enum import Enum, auto
 import Config
 from util import (
     setup_logging,
@@ -13,6 +12,7 @@ from market import (
 from logic import (
     calculate_ema,
     calculate_values,
+    cal_profit_price,
     cal_stop_price,
     reverse_long,
     reverse_short,
@@ -60,104 +60,43 @@ async def main(symbol, leverage, interval):
         volume = last_row["volume"]
         volume_MA = last_row["volume_MA"]
 
-        # 해당 포지션이 없고 마진이 있는 경우
-        if positionAmt == 0 and (balance * (ratio / 100) < available):
+        rev_long = reverse_long(data)
+        rev_short = reverse_short(data)
+        tre_long = trend_long(data)
+        tre_short = trend_short(data)
 
-            # 역추세 롱
-            if reverse_long(data):
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
-
-                await open_position(
-                    key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
-                )
-                logging.info(f"{symbol} {interval} reverse long position open")
-
-            # 역추세 숏
-            elif reverse_short(data):
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
-
-                await open_position(
-                    key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
-                )
-                logging.info(f"{symbol} {interval} reverse short position open")
-
-            # 추세 롱
-            elif trend_long(data):
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
-
-                await open_position(
-                    key, secret, symbol, "BUY", quantity, price, "SELL", stopPrice
-                )
-                logging.info(f"{symbol} {interval} trend long position open")
-
-            # 추세 숏
-            elif trend_short(data):
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
-
-                await open_position(
-                    key, secret, symbol, "SELL", quantity, price, "BUY", stopPrice
-                )
-                logging.info(f"{symbol} {interval} trend short position open")
-
-        # 해당 포지션이 있는 경우, 일부 포지션 종료
-        elif positionAmt > 0:
+        # 해당 포지션이 있는 경우, 포지션 종료 로직
+        if positionAmt > 0:
 
             # quantity 담는 로직
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 2
+                divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - value
+                remainder = positionAmt - 2 * value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
                     quantities.append(value)
+                    quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if volume >= volume_MA * 1.5 or last_row["rsi"] >= 70:
-                    price = last_row["close"]
-                    await tp_sl(key, secret, symbol, "SELL", quantities[0], price)
+                if tre_short or rev_short:
+                    await tp_sl(key, secret, symbol, "SELL", positionAmt)
+                    logging.info(
+                        f"{symbol} {interval} long position all close {positionAmt}"
+                    )
+                    quantities = []
+
+                elif volume >= volume_MA * 1.5 or last_row["rsi"] >= 70:
+                    await tp_sl(key, secret, symbol, "SELL", quantities[0])
                     logging.info(
                         f"{symbol} {interval} long position close {quantities[0]}"
                     )
                     quantities.pop(0)
-                    if not quantities:
-                        await cancel_orders(key, secret, symbol)
 
         elif positionAmt < 0:
 
@@ -166,26 +105,135 @@ async def main(symbol, leverage, interval):
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 2
+                divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - value
+                remainder = positionAmt - 2 * value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
                     quantities.append(value)
+                    quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if volume >= volume_MA * 1.5 or last_row["rsi"] <= 30:
-                    price = last_row["close"]
-                    await tp_sl(key, secret, symbol, "BUY", quantities[0], price)
+                if tre_long or rev_long:
+                    await tp_sl(key, secret, symbol, "BUY", positionAmt)
+                    logging.info(
+                        f"{symbol} {interval} short position all close {positionAmt}"
+                    )
+                    quantities = []
+
+                elif volume >= volume_MA * 1.5 or last_row["rsi"] <= 30:
+                    await tp_sl(key, secret, symbol, "BUY", quantities[0])
                     logging.info(
                         f"{symbol} {interval} short position close {quantities[0]}"
                     )
                     quantities.pop(0)
-                    if not quantities:
-                        await cancel_orders(key, secret, symbol)
+
+        # 해당 포지션이 없고 마진이 있는 경우
+        if positionAmt == 0 and (balance * (ratio / 100) < available):
+
+            # 역추세 롱
+            if rev_long:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
+                price = last_row["close"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                profitPrice = cal_profit_price(price, "BUY", symbol, amount, balance)
+                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
+
+                await open_position(
+                    key,
+                    secret,
+                    symbol,
+                    "BUY",
+                    quantity,
+                    price,
+                    "SELL",
+                    profitPrice,
+                    stopPrice,
+                )
+                logging.info(f"{symbol} {interval} reverse long position open")
+
+            # 역추세 숏
+            elif rev_short:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
+                price = last_row["close"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
+
+                await open_position(
+                    key,
+                    secret,
+                    symbol,
+                    "SELL",
+                    quantity,
+                    price,
+                    "BUY",
+                    profitPrice,
+                    stopPrice,
+                )
+                logging.info(f"{symbol} {interval} reverse short position open")
+
+            # 추세 롱
+            elif tre_long:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
+                price = last_row["close"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
+
+                await open_position(
+                    key,
+                    secret,
+                    symbol,
+                    "BUY",
+                    quantity,
+                    price,
+                    "SELL",
+                    profitPrice,
+                    stopPrice,
+                )
+                logging.info(f"{symbol} {interval} trend long position open")
+
+            # 추세 숏
+            elif tre_short:
+
+                await cancel_orders(key, secret, symbol)
+                logging.info(f"{symbol} open orders cancel")
+
+                price = last_row["close"]
+                raw_quantity = balance * (ratio / 100) / price * leverage
+                quantity = format_quantity(raw_quantity, symbol)
+                amount = price * quantity
+                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
+
+                await open_position(
+                    key,
+                    secret,
+                    symbol,
+                    "SELL",
+                    quantity,
+                    price,
+                    "BUY",
+                    profitPrice,
+                    stopPrice,
+                )
+                logging.info(f"{symbol} {interval} trend short position open")
 
 
 symbols = Config.symbols
