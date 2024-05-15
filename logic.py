@@ -140,8 +140,8 @@ def trend_long(data: pd.DataFrame) -> bool:
         return (
             last_oct.iloc[-1]["close"] > pre_max_value
             and volume >= volume_MA * 1.5
-            and last_oct.iloc[-1]["rsi"] >= 30
-            and last_oct.iloc[-1]["rsi"] <= 70
+            and last_oct.iloc[-1]["rsi"] > 30
+            and last_oct.iloc[-1]["rsi"] < 70
         )
 
     return False
@@ -162,8 +162,8 @@ def trend_short(data: pd.DataFrame) -> bool:
         return (
             last_oct.iloc[-1]["close"] < pre_min_value
             and volume >= volume_MA * 1.5
-            and last_oct.iloc[-1]["rsi"] >= 30
-            and last_oct.iloc[-1]["rsi"] <= 70
+            and last_oct.iloc[-1]["rsi"] > 30
+            and last_oct.iloc[-1]["rsi"] < 70
         )
 
     return False
