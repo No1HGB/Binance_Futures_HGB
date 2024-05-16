@@ -51,11 +51,6 @@ async def main(symbol, leverage, interval):
         data["EMA50"] = calculate_ema(data, 50)
         data = calculate_values(data)
 
-        position = await get_position(key, secret, symbol)
-        positionAmt = float(position["positionAmt"])
-
-        [balance, available] = await get_balance(key, secret)
-
         last_row = data.iloc[-1]
         volume = last_row["volume"]
         volume_MA = last_row["volume_MA"]
@@ -64,6 +59,9 @@ async def main(symbol, leverage, interval):
         rev_short = reverse_short(data)
         tre_long = trend_long(data)
         tre_short = trend_short(data)
+
+        position = await get_position(key, secret, symbol)
+        positionAmt = float(position["positionAmt"])
 
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
@@ -130,6 +128,11 @@ async def main(symbol, leverage, interval):
                         f"{symbol} {interval} short position close {quantities[0]}"
                     )
                     quantities.pop(0)
+
+        # 포지션이 종료된 경우가 있기 때문에 다시 가져오기
+        position = await get_position(key, secret, symbol)
+        positionAmt = float(position["positionAmt"])
+        [balance, available] = await get_balance(key, secret)
 
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
