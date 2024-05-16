@@ -18,6 +18,7 @@ from logic import (
     reverse_short,
     trend_long,
     trend_short,
+    divergence,
 )
 from account import (
     get_position,
@@ -55,6 +56,7 @@ async def main(symbol, leverage, interval):
         volume = last_row["volume"]
         volume_MA = last_row["volume_MA"]
 
+        [div_long, div_short] = divergence(data)
         rev_long = reverse_long(data)
         rev_short = reverse_short(data)
         tre_long = trend_long(data)
@@ -70,19 +72,18 @@ async def main(symbol, leverage, interval):
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 3
+                divide = positionAmt / 2
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - 2 * value
+                remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
                     quantities.append(value)
-                    quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if tre_short or rev_short:
+                if tre_short or rev_short or div_short:
                     await tp_sl(key, secret, symbol, "SELL", positionAmt)
                     logging.info(
                         f"{symbol} {interval} long position all close {positionAmt}"
@@ -103,19 +104,18 @@ async def main(symbol, leverage, interval):
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 3
+                divide = positionAmt / 2
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - 2 * value
+                remainder = positionAmt - value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
                     quantities.append(value)
-                    quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if tre_long or rev_long:
+                if tre_long or rev_long or div_long:
                     await tp_sl(key, secret, symbol, "BUY", positionAmt)
                     logging.info(
                         f"{symbol} {interval} short position all close {positionAmt}"
@@ -137,8 +137,8 @@ async def main(symbol, leverage, interval):
         # 해당 포지션이 없고 마진이 있는 경우
         if positionAmt == 0 and (balance * (ratio / 100) < available):
 
-            # 역추세 롱
-            if rev_long:
+            # 롱
+            if rev_long or tre_long or div_long:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -161,10 +161,23 @@ async def main(symbol, leverage, interval):
                     profitPrice,
                     stopPrice,
                 )
-                logging.info(f"{symbol} {interval} reverse long position open")
 
-            # 역추세 숏
-            elif rev_short:
+                # 로그 기록
+                message_rev = ""
+                message_tre = ""
+                message_div = ""
+                if rev_long:
+                    message_rev = "reverse long"
+                if tre_long:
+                    message_tre = "trend long"
+                if div_long:
+                    message_div = "divergence long"
+                logging.info(
+                    f"{symbol} {interval} long position open. {message_rev} {message_tre} {message_div}"
+                )
+
+            # 숏
+            elif rev_short or tre_short or div_short:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -186,57 +199,20 @@ async def main(symbol, leverage, interval):
                     profitPrice,
                     stopPrice,
                 )
-                logging.info(f"{symbol} {interval} reverse short position open")
 
-            # 추세 롱
-            elif tre_long:
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
-
-                await open_position(
-                    key,
-                    secret,
-                    symbol,
-                    "BUY",
-                    quantity,
-                    price,
-                    "SELL",
-                    profitPrice,
-                    stopPrice,
+                # 로그 기록
+                message_rev = ""
+                message_tre = ""
+                message_div = ""
+                if rev_long:
+                    message_rev = "reverse short"
+                if tre_long:
+                    message_tre = "trend short"
+                if div_long:
+                    message_div = "divergence short"
+                logging.info(
+                    f"{symbol} {interval} short position open. {message_rev} {message_tre} {message_div}"
                 )
-                logging.info(f"{symbol} {interval} trend long position open")
-
-            # 추세 숏
-            elif tre_short:
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
-
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
-                quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
-
-                await open_position(
-                    key,
-                    secret,
-                    symbol,
-                    "SELL",
-                    quantity,
-                    price,
-                    "BUY",
-                    profitPrice,
-                    stopPrice,
-                )
-                logging.info(f"{symbol} {interval} trend short position open")
 
 
 symbols = Config.symbols

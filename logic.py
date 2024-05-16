@@ -30,11 +30,12 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
         temp_df["avg_gain"] / (temp_df["avg_gain"] + temp_df["avg_loss"]) * 100
     )
 
-    # 원래 DataFrame에 'rsi',"up","down","volume_MA" 추가
+    # 원래 DataFrame에 'rsi',"up","down","volume_MA","avg_price" 추가
     df["rsi"] = temp_df["rsi"]
     df["up"] = np.maximum(df["open"], df["close"])
     df["down"] = np.minimum(df["open"], df["close"])
     df["volume_MA"] = df["volume"].rolling(window=50).mean()
+    df["avg_price"] = (df["open"] + df["close"]) / 2
 
     return df
 
@@ -167,3 +168,98 @@ def trend_short(data: pd.DataFrame) -> bool:
         )
 
     return False
+
+
+def divergence(df: pd.DataFrame) -> list:
+    # 가격 극대값과 극소값 찾기
+    price_max_peaks = df[
+        (df["avg_price"] > df["avg_price"].shift(1))
+        & (df["avg_price"] > df["avg_price"].shift(-1))
+        & (df["avg_price"] > df["avg_price"].shift(2))
+        & (df["avg_price"] > df["avg_price"].shift(-2))
+    ]
+    price_min_troughs = df[
+        (df["avg_price"] < df["avg_price"].shift(1))
+        & (df["avg_price"] < df["avg_price"].shift(-1))
+        & (df["avg_price"] < df["avg_price"].shift(2))
+        & (df["avg_price"] < df["avg_price"].shift(-2))
+    ]
+
+    # RSI의 극대값과 극소값 찾기
+    rsi_max_peaks = df[
+        (df["rsi"] > df["rsi"].shift(1))
+        & (df["rsi"] > df["rsi"].shift(-1))
+        & (df["rsi"].shift(-1) > df["rsi"].shift(-2))
+        & (df["rsi"].shift(1) > df["rsi"].shift(2))
+    ]
+    rsi_min_troughs = df[
+        (df["rsi"] < df["rsi"].shift(1))
+        & (df["rsi"] < df["rsi"].shift(-1))
+        & (df["rsi"].shift(-1) < df["rsi"].shift(-2))
+        & (df["rsi"].shift(1) < df["rsi"].shift(2))
+    ]
+
+    # 변수들
+    last_index = df.index[-1]
+
+    # 가격 극값 인덱스 RSI 기준으로 통일
+    if price_max_peaks.iloc[-1]["open"] > price_max_peaks.iloc[-1]["close"]:
+        last_index_price_max = price_max_peaks.index[-1] - 1
+    else:
+        last_index_price_max = price_max_peaks.index[-1]
+    if price_min_troughs.iloc[-1]["open"] < price_max_peaks.iloc[-1]["close"]:
+        last_index_price_min = price_min_troughs.index[-1] - 1
+    else:
+        last_index_price_min = price_min_troughs.index[-1]
+
+    last_index_rsi_max = rsi_max_peaks.index[-1]
+    last_index_rsi_min = rsi_min_troughs.index[-1]
+
+    # 가격 결정
+    last_price_max = max(
+        price_max_peaks.iloc[-1]["open"], price_max_peaks.iloc[-1]["close"]
+    )
+    last_two_price_max = max(
+        price_max_peaks.iloc[-2]["open"], price_max_peaks.iloc[-2]["close"]
+    )
+    last_price_min = min(
+        price_min_troughs.iloc[-1]["open"], price_min_troughs.iloc[-1]["close"]
+    )
+    last_two_price_min = min(
+        price_min_troughs.iloc[-2]["open"], price_min_troughs.iloc[-2]["close"]
+    )
+
+    last_rsi_max = rsi_max_peaks.iloc[-1]["rsi"]
+    last_two_rsi_max = rsi_max_peaks.iloc[-2]["rsi"]
+    last_rsi_min = rsi_min_troughs.iloc[-1]["rsi"]
+    last_two_rsi_min = rsi_min_troughs.iloc[-2]["rsi"]
+
+    ema50 = df.iloc[-1]["EMA50"]
+    high = df.iloc[-1]["high"]
+    low = df.iloc[-1]["low"]
+
+    divergence_long = False
+    divergence_short = False
+
+    # bearish
+    if last_index == (last_index_price_max + 2) and last_index == (
+        last_index_rsi_max + 2
+    ):
+        if (
+            last_price_max - last_two_price_max > 0
+            and last_rsi_max - last_two_rsi_max < 0
+            and low > ema50
+        ):
+            divergence_short = True
+    # bullish
+    elif last_index == (last_index_price_min + 2) and last_index == (
+        last_index_rsi_min + 2
+    ):
+        if (
+            last_price_min - last_two_price_min < 0
+            and last_rsi_min - last_two_rsi_min > 0
+            and high < ema50
+        ):
+            divergence_long = True
+
+    return [divergence_long, divergence_short]
