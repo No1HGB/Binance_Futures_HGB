@@ -72,13 +72,14 @@ async def main(symbol, leverage, interval):
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 2
+                divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - value
+                remainder = positionAmt - 2 * value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
+                    quantities.append(value)
                     quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
@@ -104,13 +105,14 @@ async def main(symbol, leverage, interval):
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 2
+                divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - value
+                remainder = positionAmt - 2 * value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
+                    quantities.append(value)
                     quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
