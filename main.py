@@ -186,6 +186,7 @@ async def main(symbol, leverage, interval):
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
                 amount = price * quantity
+                profitPrice = cal_profit_price(price, "SELL", symbol, amount, balance)
                 stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
 
                 await open_position(
