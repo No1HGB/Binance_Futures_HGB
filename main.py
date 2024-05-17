@@ -91,7 +91,7 @@ async def main(symbol, leverage, interval):
                     )
                     quantities = []
 
-                elif volume >= volume_MA * 1.5 or last_row["rsi"] >= 70:
+                elif volume >= volume_MA * 1.5 or last_row["rsi"] >= 75:
                     await tp_sl(key, secret, symbol, "SELL", quantities[0])
                     logging.info(
                         f"{symbol} {interval} long position close {quantities[0]}"
@@ -124,7 +124,7 @@ async def main(symbol, leverage, interval):
                     )
                     quantities = []
 
-                elif volume >= volume_MA * 1.5 or last_row["rsi"] <= 30:
+                elif volume >= volume_MA * 1.5 or last_row["rsi"] <= 25:
                     await tp_sl(key, secret, symbol, "BUY", quantities[0])
                     logging.info(
                         f"{symbol} {interval} short position close {quantities[0]}"
