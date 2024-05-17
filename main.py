@@ -65,6 +65,14 @@ async def main(symbol, leverage, interval):
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
 
+        # rsi 손익 기준선
+        if symbol == "BTCUSDT":
+            rsi_up = 70
+            rsi_down = 30
+        else:
+            rsi_up = 73
+            rsi_down = 27
+
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
 
@@ -91,7 +99,7 @@ async def main(symbol, leverage, interval):
                     )
                     quantities = []
 
-                elif volume >= volume_MA * 1.5 or last_row["rsi"] >= 75:
+                elif volume >= volume_MA * 1.5 or last_row["rsi"] >= rsi_up:
                     await tp_sl(key, secret, symbol, "SELL", quantities[0])
                     logging.info(
                         f"{symbol} {interval} long position close {quantities[0]}"
@@ -124,7 +132,7 @@ async def main(symbol, leverage, interval):
                     )
                     quantities = []
 
-                elif volume >= volume_MA * 1.5 or last_row["rsi"] <= 25:
+                elif volume >= volume_MA * 1.5 or last_row["rsi"] <= rsi_down:
                     await tp_sl(key, secret, symbol, "BUY", quantities[0])
                     logging.info(
                         f"{symbol} {interval} short position close {quantities[0]}"
