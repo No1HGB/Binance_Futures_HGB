@@ -36,6 +36,7 @@ async def main(symbol, leverage, interval):
     secret = Config.secret
     ratio = Config.ratio
     quantities = []
+    position_cnt = -1
 
     while True:
         # 정시(+2초)까지 기다리기
@@ -75,29 +76,38 @@ async def main(symbol, leverage, interval):
 
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
+            position_cnt += 1
 
             # quantity 담는 로직
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 3
+                if symbol == "ETHUSDT":
+                    divide = positionAmt / 2
+                else:
+                    divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - 2 * value
+                if symbol == "ETHUSDT":
+                    remainder = positionAmt - value
+                else:
+                    remainder = positionAmt - 2 * value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
                     quantities.append(value)
-                    quantities.append(value)
+                    if symbol == "BTCUSDT":
+                        quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if tre_short or rev_short or div_short:
+                if tre_short or rev_short or div_short or position_cnt >= 12:
                     await tp_sl(key, secret, symbol, "SELL", positionAmt)
                     logging.info(
                         f"{symbol} {interval} long position all close {positionAmt}"
                     )
                     quantities = []
+                    position_cnt = -1
 
                 elif volume >= volume_MA * 1.5 or last_row["rsi"] >= rsi_up:
                     await tp_sl(key, secret, symbol, "SELL", quantities[0])
@@ -107,30 +117,39 @@ async def main(symbol, leverage, interval):
                     quantities.pop(0)
 
         elif positionAmt < 0:
+            position_cnt += 1
 
             # quantity 담는 로직
             positionAmt = -positionAmt
             if not quantities:
                 if symbol == "SOLUSDT":
                     positionAmt = int(positionAmt)
-                divide = positionAmt / 3
+                if symbol == "ETHUSDT":
+                    divide = positionAmt / 2
+                else:
+                    divide = positionAmt / 3
                 value = format_quantity(divide, symbol)
-                remainder = positionAmt - 2 * value
+                if symbol == "ETHUSDT":
+                    remainder = positionAmt - value
+                else:
+                    remainder = positionAmt - 2 * value
                 remainder = format_quantity(remainder, symbol)
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
                     quantities.append(value)
-                    quantities.append(value)
+                    if symbol == "BTCUSDT":
+                        quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if tre_long or rev_long or div_long:
+                if tre_long or rev_long or div_long or position_cnt >= 12:
                     await tp_sl(key, secret, symbol, "BUY", positionAmt)
                     logging.info(
                         f"{symbol} {interval} short position all close {positionAmt}"
                     )
                     quantities = []
+                    position_cnt = -1
 
                 elif volume >= volume_MA * 1.5 or last_row["rsi"] <= rsi_down:
                     await tp_sl(key, secret, symbol, "BUY", quantities[0])
@@ -172,6 +191,9 @@ async def main(symbol, leverage, interval):
                     stopPrice,
                 )
 
+                # 포지션 진입 표시
+                position_cnt += 1
+
                 # 로그 기록
                 message_rev = ""
                 message_tre = ""
@@ -210,6 +232,9 @@ async def main(symbol, leverage, interval):
                     profitPrice,
                     stopPrice,
                 )
+
+                # 포지션 진입 표시
+                position_cnt += 1
 
                 # 로그 기록
                 message_rev = ""

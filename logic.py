@@ -242,8 +242,9 @@ def divergence(df: pd.DataFrame) -> list:
     divergence_short = False
 
     # bearish
-    if last_index == (last_index_price_max + 2) and last_index == (
-        last_index_rsi_max + 2
+    if (
+        last_index == (last_index_price_max + 3)
+        and last_index_price_max == last_index_rsi_max
     ):
         if (
             last_price_max - last_two_price_max > 0
@@ -252,8 +253,9 @@ def divergence(df: pd.DataFrame) -> list:
         ):
             divergence_short = True
     # bullish
-    elif last_index == (last_index_price_min + 2) and last_index == (
-        last_index_rsi_min + 2
+    elif (
+        last_index == (last_index_price_min + 3)
+        and last_index_price_min == last_index_rsi_min
     ):
         if (
             last_price_min - last_two_price_min < 0
