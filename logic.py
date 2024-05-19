@@ -127,10 +127,16 @@ def reverse_short(data: pd.DataFrame) -> bool:
 
 
 # 추세 롱
-def trend_long(data: pd.DataFrame) -> bool:
+def trend_long(data: pd.DataFrame, symbol) -> bool:
     last_oct = data.tail(8)
     volume = data.iloc[-1]["volume"]
     volume_MA = data.iloc[-1]["volume_MA"]
+    if symbol == "BTCUSDT":
+        rsi_down = 30
+        rsi_up = 70
+    else:
+        rsi_down = 33
+        rsi_up = 73
 
     if (
         last_oct.iloc[-1]["close"] > last_oct.iloc[-1]["open"]
@@ -141,18 +147,26 @@ def trend_long(data: pd.DataFrame) -> bool:
         return (
             last_oct.iloc[-1]["close"] > pre_max_value
             and volume >= volume_MA * 1.5
-            and last_oct.iloc[-1]["rsi"] > 30
-            and last_oct.iloc[-1]["rsi"] < 70
+            and last_oct.iloc[-1]["rsi"] > rsi_down
+            and last_oct.iloc[-1]["rsi"] < rsi_up
         )
 
     return False
 
 
 # 추세 숏
-def trend_short(data: pd.DataFrame) -> bool:
+def trend_short(data: pd.DataFrame, symbol) -> bool:
     last_oct = data.tail(8)
     volume = data.iloc[-1]["volume"]
     volume_MA = data.iloc[-1]["volume_MA"]
+    if symbol == "BTCUSDT":
+        rsi_down = 30
+        rsi_up = 70
+        volume_coeff = 1.5
+    else:
+        rsi_down = 33
+        rsi_up = 73
+        volume_coeff = 1.2
 
     if (
         last_oct.iloc[-1]["close"] < last_oct.iloc[-1]["open"]
@@ -162,9 +176,9 @@ def trend_short(data: pd.DataFrame) -> bool:
 
         return (
             last_oct.iloc[-1]["close"] < pre_min_value
-            and volume >= volume_MA * 1.5
-            and last_oct.iloc[-1]["rsi"] > 30
-            and last_oct.iloc[-1]["rsi"] < 70
+            and volume >= volume_MA * volume_coeff
+            and last_oct.iloc[-1]["rsi"] > rsi_down
+            and last_oct.iloc[-1]["rsi"] < rsi_up
         )
 
     return False
