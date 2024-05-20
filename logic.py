@@ -42,6 +42,10 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
 
 def cal_profit_price(entryPrice, side, symbol, positionAmt, balance):
     profit_ratio = Config.profit_ratio
+    if symbol == "ETHUSDT":
+        profit_ratio *= 1.2
+    elif symbol == "SOLUSDT":
+        profit_ratio *= 1.7
 
     entry_minus_stop_abs = (
         (balance * profit_ratio / 100 - positionAmt * 0.008 / 100)
