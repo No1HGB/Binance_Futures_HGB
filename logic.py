@@ -102,8 +102,7 @@ def reverse_long(data: pd.DataFrame) -> bool:
         return (
             volume >= volume_MA * 1.5
             and last_row["close"] > ema
-            and last_row["high"] > ema
-            and last_row["low"] < ema
+            and last_row["open"] < ema
             and (last_row["avg_price"] - last_two["avg_price"]) > 0
             and last_two["up"] < ema
         )
@@ -122,9 +121,8 @@ def reverse_short(data: pd.DataFrame) -> bool:
     if last_row["close"] < last_row["open"]:
         return (
             volume >= volume_MA * 1.5
+            and last_row["open"] > ema
             and last_row["close"] < ema
-            and last_row["high"] > ema
-            and last_row["low"] < ema
             and (last_row["avg_price"] - last_two["avg_price"]) < 0
             and last_two["down"] > ema
         )

@@ -36,7 +36,6 @@ async def main(symbol, leverage, interval):
     secret = Config.secret
     ratio = Config.ratio
     quantities = []
-    position_cnt = 0
 
     while True:
         # 정시(+2초)까지 기다리기
@@ -65,6 +64,7 @@ async def main(symbol, leverage, interval):
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
+        unRealizedProfit = float(position["unRealizedProfit"])
 
         # rsi 손익 기준선
         if symbol == "BTCUSDT":
@@ -76,8 +76,6 @@ async def main(symbol, leverage, interval):
 
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
-            position_cnt += 1
-            logging.info(f"position count:{position_cnt}")
 
             # quantity 담는 로직
             if not quantities:
@@ -105,33 +103,16 @@ async def main(symbol, leverage, interval):
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if tre_long or rev_long or div_long:
-                    position_cnt = 0
-                    logging.info(
-                        f"position count init, tre_long:{tre_long}, rev_long:{rev_long},div_long:{div_long}"
-                    )
-
-                if tre_short or rev_short or div_short or position_cnt >= 12:
-                    await tp_sl(key, secret, symbol, "SELL", positionAmt)
-                    logging.info(
-                        f"{symbol} {interval} long position all close {positionAmt}"
-                    )
-                    quantities = []
-                    position_cnt = 0
-
-                elif volume >= volume_MA * 1.5 or last_row["rsi"] >= rsi_up:
+                if (
+                    volume >= volume_MA * 1.5 or last_row["rsi"] >= rsi_up
+                ) and unRealizedProfit > 0:
                     await tp_sl(key, secret, symbol, "SELL", quantities[0])
                     logging.info(
                         f"{symbol} {interval} long position close {quantities[0]}"
                     )
                     quantities.pop(0)
-                    if not quantities:
-                        position_cnt = 0
-                        logging.info("position count init")
 
         elif positionAmt < 0:
-            position_cnt += 1
-            logging.info(f"position count:{position_cnt}")
 
             # quantity 담는 로직
             positionAmt = -positionAmt
@@ -159,29 +140,14 @@ async def main(symbol, leverage, interval):
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
-                if tre_short or rev_short or div_short:
-                    position_cnt = 0
-                    logging.info(
-                        f"position count init, tre_short:{tre_short}, rev_short:{rev_short},div_short:{div_short}"
-                    )
-
-                if tre_long or rev_long or div_long or position_cnt >= 12:
-                    await tp_sl(key, secret, symbol, "BUY", positionAmt)
-                    logging.info(
-                        f"{symbol} {interval} short position all close {positionAmt}"
-                    )
-                    quantities = []
-                    position_cnt = 0
-
-                elif volume >= volume_MA * 1.5 or last_row["rsi"] <= rsi_down:
+                if (
+                    volume >= volume_MA * 1.5 or last_row["rsi"] <= rsi_down
+                ) and unRealizedProfit > 0:
                     await tp_sl(key, secret, symbol, "BUY", quantities[0])
                     logging.info(
                         f"{symbol} {interval} short position close {quantities[0]}"
                     )
                     quantities.pop(0)
-                    if not quantities:
-                        position_cnt = 0
-                        logging.info("position count init")
 
         time.sleep(1)
         # 포지션이 종료된 경우가 있기 때문에 다시 가져오기
@@ -217,8 +183,6 @@ async def main(symbol, leverage, interval):
                     stopPrice,
                 )
 
-                position_cnt = 0
-
                 # 로그 기록
                 logging.info(
                     f"{symbol} {interval} long position open. tre_long:{tre_long}, rev_long:{rev_long}, div_long:{div_long}"
@@ -248,8 +212,6 @@ async def main(symbol, leverage, interval):
                     profitPrice,
                     stopPrice,
                 )
-
-                position_cnt = 0
 
                 # 로그 기록
                 logging.info(
