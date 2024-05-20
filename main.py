@@ -1,4 +1,4 @@
-import logging, asyncio, time
+import logging, asyncio
 import Config
 from util import (
     setup_logging,
@@ -149,7 +149,6 @@ async def main(symbol, leverage, interval):
                     )
                     quantities.pop(0)
 
-        time.sleep(1)
         # 포지션이 종료된 경우가 있기 때문에 다시 가져오기
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
