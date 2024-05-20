@@ -1,4 +1,4 @@
-import logging, asyncio
+import logging, asyncio, time
 import Config
 from util import (
     setup_logging,
@@ -96,9 +96,12 @@ async def main(symbol, leverage, interval):
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
-                    quantities.append(value)
                     if symbol == "BTCUSDT":
                         quantities.append(value)
+                        quantities.append(value)
+                    else:
+                        quantities.append(value)
+
                 logging.info(f"remainder:{remainder} / value:{value}")
 
             if quantities[0] > 0:
@@ -148,8 +151,10 @@ async def main(symbol, leverage, interval):
                 if remainder > 0:
                     quantities.append(remainder)
                 if value > 0:
-                    quantities.append(value)
                     if symbol == "BTCUSDT":
+                        quantities.append(value)
+                        quantities.append(value)
+                    else:
                         quantities.append(value)
                 logging.info(f"remainder:{remainder} / value:{value}")
 
@@ -178,6 +183,7 @@ async def main(symbol, leverage, interval):
                         position_cnt = 0
                         logging.info("position count init")
 
+        time.sleep(1)
         # 포지션이 종료된 경우가 있기 때문에 다시 가져오기
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
