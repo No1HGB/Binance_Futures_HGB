@@ -211,6 +211,8 @@ async def main(symbol, leverage, interval):
                     stopPrice,
                 )
 
+                position_cnt = 0
+
                 # 로그 기록
                 logging.info(
                     f"{symbol} {interval} long position open. tre_long:{tre_long}, rev_long:{rev_long}, div_long:{div_long}"
@@ -240,6 +242,8 @@ async def main(symbol, leverage, interval):
                     profitPrice,
                     stopPrice,
                 )
+
+                position_cnt = 0
 
                 # 로그 기록
                 logging.info(

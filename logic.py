@@ -93,6 +93,7 @@ def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
 # 역추세 롱
 def reverse_long(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
+    last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
     ema = last_row["EMA50"]
@@ -103,6 +104,8 @@ def reverse_long(data: pd.DataFrame) -> bool:
             and last_row["close"] > ema
             and last_row["high"] > ema
             and last_row["low"] < ema
+            and (last_row["avg_price"] - last_two["avg_price"]) > 0
+            and last_two["up"] < ema
         )
 
     return False
@@ -111,6 +114,7 @@ def reverse_long(data: pd.DataFrame) -> bool:
 # 역추세 숏
 def reverse_short(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
+    last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
     ema = last_row["EMA50"]
@@ -121,6 +125,8 @@ def reverse_short(data: pd.DataFrame) -> bool:
             and last_row["close"] < ema
             and last_row["high"] > ema
             and last_row["low"] < ema
+            and (last_row["avg_price"] - last_two["avg_price"]) < 0
+            and last_two["down"] > ema
         )
 
     return False
@@ -263,6 +269,9 @@ def divergence(df: pd.DataFrame) -> list:
     ema50 = df.iloc[-1]["EMA50"]
     high = df.iloc[-1]["high"]
     low = df.iloc[-1]["low"]
+    last_seven = df.tail(7)
+    pre_max_value = last_seven["up"][:].max()
+    pre_min_value = last_seven["down"][:].min()
 
     divergence_long = False
     divergence_short = False
@@ -277,6 +286,7 @@ def divergence(df: pd.DataFrame) -> list:
             last_price_max - last_two_price_max > 0
             and last_rsi_max - last_two_rsi_max < 0
             and low > ema50
+            and pre_min_value > ema50
         ):
             divergence_short = True
     # bullish
@@ -289,6 +299,7 @@ def divergence(df: pd.DataFrame) -> list:
             last_price_min - last_two_price_min < 0
             and last_rsi_min - last_two_rsi_min > 0
             and high < ema50
+            and pre_max_value < ema50
         ):
             divergence_long = True
 
