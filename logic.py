@@ -43,9 +43,9 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
 def cal_profit_price(entryPrice, side, symbol, positionAmt, balance):
     profit_ratio = Config.profit_ratio
     if symbol == "ETHUSDT":
-        profit_ratio *= 1.2
+        profit_ratio *= 1.07
     elif symbol == "SOLUSDT":
-        profit_ratio *= 1.7
+        profit_ratio *= 1.2
 
     entry_minus_stop_abs = (
         (balance * profit_ratio / 100 - positionAmt * 0.008 / 100)
@@ -108,7 +108,6 @@ def reverse_long(data: pd.DataFrame) -> bool:
             and last_row["close"] > ema
             and last_row["open"] < ema
             and (last_row["avg_price"] - last_two["avg_price"]) > 0
-            and last_two["up"] < ema
         )
 
     return False
@@ -128,7 +127,6 @@ def reverse_short(data: pd.DataFrame) -> bool:
             and last_row["open"] > ema
             and last_row["close"] < ema
             and (last_row["avg_price"] - last_two["avg_price"]) < 0
-            and last_two["down"] > ema
         )
 
     return False
@@ -174,7 +172,7 @@ def trend_short(data: pd.DataFrame, symbol) -> bool:
     else:
         rsi_down = 33
         rsi_up = 73
-        volume_coeff = 1.2
+        volume_coeff = 1.27
 
     if (
         last_oct.iloc[-1]["close"] < last_oct.iloc[-1]["open"]
@@ -234,20 +232,9 @@ def divergence(df: pd.DataFrame) -> list:
     else:
         last_index_price_min = price_min_troughs.index[-1]
 
-    if price_max_peaks.iloc[-2]["open"] > price_max_peaks.iloc[-2]["close"]:
-        last_two_index_price_max = price_max_peaks.index[-2] - 1
-    else:
-        last_two_index_price_max = price_max_peaks.index[-2]
-    if price_min_troughs.iloc[-2]["open"] < price_max_peaks.iloc[-2]["close"]:
-        last_two_index_price_min = price_min_troughs.index[-2] - 1
-    else:
-        last_two_index_price_min = price_min_troughs.index[-2]
-
     # rsi 극값 인덱스
     last_index_rsi_max = rsi_max_peaks.index[-1]
     last_index_rsi_min = rsi_min_troughs.index[-1]
-    last_two_index_rsi_max = rsi_max_peaks.index[-2]
-    last_two_index_rsi_min = rsi_min_troughs.index[-2]
 
     # 가격 결정
     last_price_max = max(
@@ -282,7 +269,6 @@ def divergence(df: pd.DataFrame) -> list:
     if (
         last_index == (last_index_price_max + 3)
         and last_index_price_max == last_index_rsi_max
-        and last_two_index_price_max == last_two_index_rsi_max
     ):
         if (
             last_price_max - last_two_price_max > 0
@@ -295,7 +281,6 @@ def divergence(df: pd.DataFrame) -> list:
     elif (
         last_index == (last_index_price_min + 3)
         and last_index_price_min == last_index_rsi_min
-        and last_two_index_price_min == last_two_index_rsi_min
     ):
         if (
             last_price_min - last_two_price_min < 0
