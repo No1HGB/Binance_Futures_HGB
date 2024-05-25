@@ -141,7 +141,7 @@ def just_short(data: pd.DataFrame, symbol: str) -> bool:
         volume_coeff = 1.2
         rsi_coeff = 36
 
-    if last_row["close"] > last_row["open"]:
+    if last_row["close"] < last_row["open"]:
         return (
             volume >= volume_MA * volume_coeff
             and (last_row["avg_price"] - last_two["avg_price"]) < 0
