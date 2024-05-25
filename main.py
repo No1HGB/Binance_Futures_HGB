@@ -184,7 +184,6 @@ async def run_multiple_tasks():
     await asyncio.gather(
         main(symbols[0], leverages[0], interval),
         main(symbols[1], leverages[1], interval),
-        main(symbols[2], leverages[2], interval),
     )
 
 
