@@ -41,11 +41,14 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def cal_profit_price(entryPrice, side, symbol, positionAmt, balance):
-    profit_ratio = Config.profit_ratio
-    if symbol == "ETHUSDT":
-        profit_ratio *= 1.07
+    ratio_list = Config.profit_ratio
+
+    if symbol == "BTCUSDT":
+        profit_ratio = ratio_list[0]
+    elif symbol == "ETHUSDT":
+        profit_ratio = ratio_list[1]
     elif symbol == "SOLUSDT":
-        profit_ratio *= 1.2
+        profit_ratio = ratio_list[2]
 
     entry_minus_stop_abs = (
         (balance * profit_ratio / 100 - positionAmt * 0.008 / 100)
@@ -94,97 +97,55 @@ def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
     return stopPrice
 
 
-# 역추세 롱
-def reverse_long(data: pd.DataFrame) -> bool:
+# 롱 진입
+def just_long(data: pd.DataFrame, symbol: str) -> bool:
     last_row = data.iloc[-1]
     last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
-    ema = last_row["EMA50"]
+
+    if symbol == "BTCUSDT":
+        volume_coeff = 1.7
+        rsi_coeff = 70
+    elif symbol == "ETHUSDT":
+        volume_coeff = 1.5
+        rsi_coeff = 74
+    elif symbol == "SOLUSDT":
+        volume_coeff = 1.2
+        rsi_coeff = 70
 
     if last_row["close"] > last_row["open"]:
         return (
-            volume >= volume_MA * 1.5
-            and last_row["close"] > ema
-            and last_row["open"] < ema
+            volume >= volume_MA * volume_coeff
             and (last_row["avg_price"] - last_two["avg_price"]) > 0
+            and last_row["rsi"] < rsi_coeff
         )
 
     return False
 
 
-# 역추세 숏
-def reverse_short(data: pd.DataFrame) -> bool:
+# 숏 진입
+def just_short(data: pd.DataFrame, symbol: str) -> bool:
     last_row = data.iloc[-1]
     last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
-    ema = last_row["EMA50"]
 
-    if last_row["close"] < last_row["open"]:
-        return (
-            volume >= volume_MA * 1.5
-            and last_row["open"] > ema
-            and last_row["close"] < ema
-            and (last_row["avg_price"] - last_two["avg_price"]) < 0
-        )
-
-    return False
-
-
-# 추세 롱
-def trend_long(data: pd.DataFrame, symbol) -> bool:
-    last_oct = data.tail(8)
-    volume = data.iloc[-1]["volume"]
-    volume_MA = data.iloc[-1]["volume_MA"]
     if symbol == "BTCUSDT":
-        rsi_down = 30
-        rsi_up = 70
-    else:
-        rsi_down = 33
-        rsi_up = 73
-
-    if (
-        last_oct.iloc[-1]["close"] > last_oct.iloc[-1]["open"]
-        and last_oct.iloc[-1]["open"] > last_oct.iloc[-1]["EMA50"]
-    ):
-        pre_max_value = last_oct["up"][:-1].max()
-
-        return (
-            last_oct.iloc[-1]["close"] > pre_max_value
-            and volume >= volume_MA * 1.5
-            and last_oct.iloc[-1]["rsi"] > rsi_down
-            and last_oct.iloc[-1]["rsi"] < rsi_up
-        )
-
-    return False
-
-
-# 추세 숏
-def trend_short(data: pd.DataFrame, symbol) -> bool:
-    last_oct = data.tail(8)
-    volume = data.iloc[-1]["volume"]
-    volume_MA = data.iloc[-1]["volume_MA"]
-    if symbol == "BTCUSDT":
-        rsi_down = 30
-        rsi_up = 70
+        volume_coeff = 1.7
+        rsi_coeff = 30
+    elif symbol == "ETHUSDT":
         volume_coeff = 1.5
-    else:
-        rsi_down = 33
-        rsi_up = 73
-        volume_coeff = 1.27
+        rsi_coeff = 36
+    elif symbol == "SOLUSDT":
+        volume_coeff = 1.2
+        rsi_coeff = 36
 
-    if (
-        last_oct.iloc[-1]["close"] < last_oct.iloc[-1]["open"]
-        and last_oct.iloc[-1]["open"] < last_oct.iloc[-1]["EMA50"]
-    ):
-        pre_min_value = last_oct["down"][:-1].min()
-
+    if last_row["close"] > last_row["open"]:
         return (
-            last_oct.iloc[-1]["close"] < pre_min_value
-            and volume >= volume_MA * volume_coeff
-            and last_oct.iloc[-1]["rsi"] > rsi_down
-            and last_oct.iloc[-1]["rsi"] < rsi_up
+            volume >= volume_MA * volume_coeff
+            and (last_row["avg_price"] - last_two["avg_price"]) < 0
+            and last_row["rsi"] > rsi_coeff
         )
 
     return False

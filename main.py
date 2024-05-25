@@ -14,10 +14,8 @@ from logic import (
     calculate_values,
     cal_profit_price,
     cal_stop_price,
-    reverse_long,
-    reverse_short,
-    trend_long,
-    trend_short,
+    just_long,
+    just_short,
     divergence,
 )
 from account import (
@@ -53,112 +51,70 @@ async def main(symbol, leverage, interval):
         data = calculate_values(data)
 
         last_row = data.iloc[-1]
-        volume = last_row["volume"]
-        volume_MA = last_row["volume_MA"]
+        last_two = data.iloc[-2]
 
         [div_long, div_short] = divergence(data)
-        rev_long = reverse_long(data)
-        rev_short = reverse_short(data)
-        tre_long = trend_long(data, symbol)
-        tre_short = trend_short(data, symbol)
+        long = just_long(data, symbol)
+        short = just_short(data, symbol)
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
-        unRealizedProfit = float(position["unRealizedProfit"])
 
-        # rsi 손익 기준선
-        if symbol == "BTCUSDT":
-            rsi_up = 70
-            rsi_down = 30
-        else:
-            rsi_up = 73
-            rsi_down = 33
+        # 분할 종료를 위한 quantities 담기
+        if not quantities and positionAmt != 0:
+            abs_positionAmt = abs(positionAmt)
+
+            if symbol == "SOLUSDT":
+                abs_positionAmt = int(abs_positionAmt)
+            divide = abs_positionAmt / 2
+            value = format_quantity(divide, symbol)
+            remainder = abs_positionAmt - value
+            remainder = format_quantity(remainder, symbol)
+            if remainder > 0:
+                quantities.append(remainder)
+            if value > 0:
+                quantities.append(value)
+
+            logging.info(f"remainder:{remainder} / value:{value}")
 
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
 
-            # quantity 담는 로직
-            if not quantities:
-                if symbol == "SOLUSDT":
-                    positionAmt = int(positionAmt)
-                if symbol == "BTCUSDT":
-                    divide = positionAmt / 3
-                else:
-                    divide = positionAmt / 2
-                value = format_quantity(divide, symbol)
-                if symbol == "BTCUSDT":
-                    remainder = positionAmt - 2 * value
-                else:
-                    remainder = positionAmt - value
-                remainder = format_quantity(remainder, symbol)
-                if remainder > 0:
-                    quantities.append(remainder)
-                if value > 0:
-                    if symbol == "BTCUSDT":
-                        quantities.append(value)
-                        quantities.append(value)
-                    else:
-                        quantities.append(value)
+            if short or div_short:
+                await tp_sl(key, secret, symbol, "SELL", positionAmt)
+                logging.info(f"{symbol} {interval} long position all close")
+                quantities = []
 
-                logging.info(f"remainder:{remainder} / value:{value}")
-
-            if quantities[0] > 0:
-                if (
-                    volume >= volume_MA * 1.5 or last_row["rsi"] >= rsi_up
-                ) and unRealizedProfit > 0:
-                    await tp_sl(key, secret, symbol, "SELL", quantities[0])
-                    logging.info(
-                        f"{symbol} {interval} long position close {quantities[0]}"
-                    )
-                    quantities.pop(0)
+            elif last_row["avg_price"] - last_two["avg_price"] < 0:
+                await tp_sl(key, secret, symbol, "SELL", quantities[0])
+                logging.info(f"{symbol} {interval} long position close {quantities[0]}")
+                quantities.pop(0)
 
         elif positionAmt < 0:
+            positionAmt = abs(positionAmt)
 
-            # quantity 담는 로직
-            positionAmt = -positionAmt
-            if not quantities:
-                if symbol == "SOLUSDT":
-                    positionAmt = int(positionAmt)
-                if symbol == "BTCUSDT":
-                    divide = positionAmt / 3
-                else:
-                    divide = positionAmt / 2
-                value = format_quantity(divide, symbol)
-                if symbol == "BTCUSDT":
-                    remainder = positionAmt - 2 * value
-                else:
-                    remainder = positionAmt - value
-                remainder = format_quantity(remainder, symbol)
-                if remainder > 0:
-                    quantities.append(remainder)
-                if value > 0:
-                    if symbol == "BTCUSDT":
-                        quantities.append(value)
-                        quantities.append(value)
-                    else:
-                        quantities.append(value)
-                logging.info(f"remainder:{remainder} / value:{value}")
+            if long or div_long:
+                await tp_sl(key, secret, symbol, "BUY", positionAmt)
+                logging.info(f"{symbol} {interval} short position all close")
+                quantities = []
 
-            if quantities[0] > 0:
-                if (
-                    volume >= volume_MA * 1.5 or last_row["rsi"] <= rsi_down
-                ) and unRealizedProfit > 0:
-                    await tp_sl(key, secret, symbol, "BUY", quantities[0])
-                    logging.info(
-                        f"{symbol} {interval} short position close {quantities[0]}"
-                    )
-                    quantities.pop(0)
+            elif last_row["avg_price"] - last_two["avg_price"] > 0:
+                await tp_sl(key, secret, symbol, "BUY", quantities[0])
+                logging.info(
+                    f"{symbol} {interval} short position close {quantities[0]}"
+                )
+                quantities.pop(0)
 
         # 포지션이 종료된 경우가 있기 때문에 다시 가져오기
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
         [balance, available] = await get_balance(key, secret)
 
-        # 해당 포지션이 없고 마진이 있는 경우
+        # 해당 포지션이 없고 마진이 있는 경우 포지션 진입
         if positionAmt == 0 and (balance * (ratio / 100) < available):
 
             # 롱
-            if rev_long or tre_long or div_long:
+            if long or div_long:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -184,11 +140,11 @@ async def main(symbol, leverage, interval):
 
                 # 로그 기록
                 logging.info(
-                    f"{symbol} {interval} long position open. tre_long:{tre_long}, rev_long:{rev_long}, div_long:{div_long}"
+                    f"{symbol} {interval} long position open. div_long:{div_long}"
                 )
 
             # 숏
-            elif rev_short or tre_short or div_short:
+            elif short or div_short:
 
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
@@ -214,7 +170,7 @@ async def main(symbol, leverage, interval):
 
                 # 로그 기록
                 logging.info(
-                    f"{symbol} {interval} short position open. tre_short:{tre_short}, rev_short:{rev_short}, div_short:{div_short}"
+                    f"{symbol} {interval} short position open. div_short:{div_short}"
                 )
 
 
@@ -228,6 +184,7 @@ async def run_multiple_tasks():
     await asyncio.gather(
         main(symbols[0], leverages[0], interval),
         main(symbols[1], leverages[1], interval),
+        main(symbols[2], leverages[2], interval),
     )
 
 
