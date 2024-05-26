@@ -85,7 +85,10 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} long position all close")
                 quantities = []
 
-            elif last_row["avg_price"] - last_two["avg_price"] < 0:
+            elif last_row["close"] < last_row["open"] and (
+                last_row["avg_price"] - last_two["avg_price"] < 0
+                or last_row["volume"] >= last_row["volume_MA"] * 1.7
+            ):
                 await tp_sl(key, secret, symbol, "SELL", quantities[0])
                 logging.info(f"{symbol} {interval} long position close {quantities[0]}")
                 quantities.pop(0)
@@ -98,7 +101,10 @@ async def main(symbol, leverage, interval):
                 logging.info(f"{symbol} {interval} short position all close")
                 quantities = []
 
-            elif last_row["avg_price"] - last_two["avg_price"] > 0:
+            elif last_row["close"] > last_row["open"] and (
+                last_row["avg_price"] - last_two["avg_price"] > 0
+                or last_row["volume"] >= last_row["volume_MA"] * 1.7
+            ):
                 await tp_sl(key, secret, symbol, "BUY", quantities[0])
                 logging.info(
                     f"{symbol} {interval} short position close {quantities[0]}"
