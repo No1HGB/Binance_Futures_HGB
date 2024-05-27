@@ -11,4 +11,4 @@ leverages = [5, 5, 3]
 interval = "1h"  # 1h,4h,1d
 ratio = 20  # margin ratio per balance (%)
 profit_ratio = [5.7, 5.7, 7]  # take profit ratio for whole balance (%)
-stop_ratio = 1  # stop loss ratio for whole balance (%)
+stop_ratio = 0.7  # stop loss ratio for whole balance (%)

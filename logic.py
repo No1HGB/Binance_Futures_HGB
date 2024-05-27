@@ -76,7 +76,7 @@ def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
     stop_ratio = Config.stop_ratio
 
     entry_minus_stop_abs = (
-        (balance * stop_ratio / 100 - positionAmt * 0.008 / 100)
+        (balance * stop_ratio / 100 - positionAmt * 0.1 / 100)
         / positionAmt
         * entryPrice
     )

@@ -12,7 +12,6 @@ from market import (
 from logic import (
     calculate_ema,
     calculate_values,
-    cal_profit_price,
     cal_stop_price,
     just_long,
     just_short,
@@ -51,7 +50,6 @@ async def main(symbol, leverage, interval):
         data = calculate_values(data)
 
         last_row = data.iloc[-1]
-        last_two = data.iloc[-2]
 
         [div_long, div_short] = divergence(data)
         long = just_long(data, symbol)
@@ -122,7 +120,6 @@ async def main(symbol, leverage, interval):
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
                 amount = price * quantity
-                profitPrice = cal_profit_price(price, "BUY", symbol, amount, balance)
                 stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
 
                 await open_position(
@@ -131,9 +128,7 @@ async def main(symbol, leverage, interval):
                     symbol,
                     "BUY",
                     quantity,
-                    price,
                     "SELL",
-                    profitPrice,
                     stopPrice,
                 )
 
@@ -152,7 +147,6 @@ async def main(symbol, leverage, interval):
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
                 amount = price * quantity
-                profitPrice = cal_profit_price(price, "SELL", symbol, amount, balance)
                 stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
 
                 await open_position(
@@ -161,9 +155,7 @@ async def main(symbol, leverage, interval):
                     symbol,
                     "SELL",
                     quantity,
-                    price,
                     "BUY",
-                    profitPrice,
                     stopPrice,
                 )
 
