@@ -34,6 +34,7 @@ async def main(symbol, leverage, interval):
     secret = Config.secret
     ratio = Config.ratio
     quantities = []
+    positionCnt = 0
 
     while True:
         # 정시(+2초)까지 기다리기
@@ -80,15 +81,26 @@ async def main(symbol, leverage, interval):
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
 
+            # 포지션 종료를 위한 값
+            if (
+                last_row["avg_price"] - last_two["avg_price"] < 0
+                or last_row["close"] < last_row["open"]
+            ):
+                positionCnt += 1
+
+            # 포지션 종료 로직
             if short or div_short:
                 await tp_sl(key, secret, symbol, "SELL", positionAmt)
                 logging.info(f"{symbol} {interval} long position all close")
                 quantities = []
-
-            elif last_row["close"] < last_row["open"] and (
-                last_row["avg_price"] - last_two["avg_price"] < 0
-                or last_row["volume"] >= last_row["volume_MA"] * 1.7
+            elif (
+                last_row["close"] < last_row["open"]
+                and last_row["volume"] >= last_row["volume_MA"] * 1.2
             ):
+                await tp_sl(key, secret, symbol, "SELL", quantities[0])
+                logging.info(f"{symbol} {interval} long position close {quantities[0]}")
+                quantities.pop(0)
+            elif positionCnt > 2:
                 await tp_sl(key, secret, symbol, "SELL", quantities[0])
                 logging.info(f"{symbol} {interval} long position close {quantities[0]}")
                 quantities.pop(0)
@@ -96,15 +108,27 @@ async def main(symbol, leverage, interval):
         elif positionAmt < 0:
             positionAmt = abs(positionAmt)
 
+            if (
+                last_row["avg_price"] - last_two["avg_price"] > 0
+                or last_row["close"] > last_row["open"]
+            ):
+                positionCnt += 1
+
             if long or div_long:
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position all close")
                 quantities = []
 
-            elif last_row["close"] > last_row["open"] and (
-                last_row["avg_price"] - last_two["avg_price"] > 0
-                or last_row["volume"] >= last_row["volume_MA"] * 1.7
+            elif (
+                last_row["close"] > last_row["open"]
+                and last_row["volume"] >= last_row["volume_MA"] * 1.2
             ):
+                await tp_sl(key, secret, symbol, "BUY", quantities[0])
+                logging.info(
+                    f"{symbol} {interval} short position close {quantities[0]}"
+                )
+                quantities.pop(0)
+            elif positionCnt > 2:
                 await tp_sl(key, secret, symbol, "BUY", quantities[0])
                 logging.info(
                     f"{symbol} {interval} short position close {quantities[0]}"
