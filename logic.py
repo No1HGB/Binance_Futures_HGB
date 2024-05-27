@@ -112,20 +112,20 @@ def just_long(data: pd.DataFrame, symbol: str) -> bool:
 
     if symbol == "BTCUSDT":
         volume_coeff = 1.7
-        rsi_coeff = 70
+        rsi_coeff = 71
     elif symbol == "ETHUSDT":
         volume_coeff = 1.5
-        rsi_coeff = 74
+        rsi_coeff = 71
     elif symbol == "SOLUSDT":
         volume_coeff = 1.2
-        rsi_coeff = 70
+        rsi_coeff = 71
 
     if last_row["close"] > last_row["open"]:
         return (
             volume >= volume_MA * volume_coeff
             and (last_row["avg_price"] - last_two["avg_price"]) > 0
             and last_row["rsi"] < rsi_coeff
-            and up_tail_ratio < 1.7
+            and up_tail_ratio < 1
         )
 
     return False
@@ -146,20 +146,20 @@ def just_short(data: pd.DataFrame, symbol: str) -> bool:
 
     if symbol == "BTCUSDT":
         volume_coeff = 1.7
-        rsi_coeff = 30
+        rsi_coeff = 37
     elif symbol == "ETHUSDT":
         volume_coeff = 1.5
-        rsi_coeff = 36
+        rsi_coeff = 37
     elif symbol == "SOLUSDT":
         volume_coeff = 1.2
-        rsi_coeff = 36
+        rsi_coeff = 37
 
     if last_row["close"] < last_row["open"]:
         return (
             volume >= volume_MA * volume_coeff
             and (last_row["avg_price"] - last_two["avg_price"]) < 0
             and last_row["rsi"] > rsi_coeff
-            and down_tail_ratio < 1.7
+            and down_tail_ratio < 1
         )
 
     return False
