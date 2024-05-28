@@ -32,7 +32,7 @@ async def main(symbol, leverage, interval):
     key = Config.key
     secret = Config.secret
     ratio = Config.ratio
-    quantities = []
+    short_cnt = 0
 
     while True:
         # 정시(+2초)까지 기다리기
@@ -57,58 +57,36 @@ async def main(symbol, leverage, interval):
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
-
-        # 분할 종료를 위한 quantities 담기
-        if not quantities and positionAmt != 0:
-            abs_positionAmt = abs(positionAmt)
-
-            if symbol == "SOLUSDT":
-                abs_positionAmt = int(abs_positionAmt)
-            divide = abs_positionAmt / 3
-            value = format_quantity(divide, symbol)
-            remainder = abs_positionAmt - 2 * value
-            remainder = format_quantity(remainder, symbol)
-            if remainder > 0:
-                quantities.append(remainder)
-            if value > 0:
-                quantities.append(value)
-                quantities.append(value)
-
-            logging.info(f"remainder:{remainder} / value:{value}")
+        [balance, available] = await get_balance(key, secret)
 
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
             if short or div_short:
                 await tp_sl(key, secret, symbol, "SELL", positionAmt)
                 logging.info(f"{symbol} {interval} long position all close")
-                quantities = []
+
             elif last_row["close"] < last_row["open"]:
-                await tp_sl(key, secret, symbol, "SELL", quantities[0])
-                logging.info(f"{symbol} {interval} long position close {quantities[0]}")
-                quantities.pop(0)
+                await tp_sl(key, secret, symbol, "SELL", positionAmt)
+                logging.info(f"{symbol} {interval} long position close {positionAmt}")
 
         elif positionAmt < 0:
             positionAmt = abs(positionAmt)
 
+            if last_row["close"] > last_row["open"]:
+                short_cnt += 1
+
             if long or div_long:
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position all close")
-                quantities = []
 
-            elif last_row["close"] > last_row["open"]:
-                await tp_sl(key, secret, symbol, "BUY", quantities[0])
-                logging.info(
-                    f"{symbol} {interval} short position close {quantities[0]}"
-                )
-                quantities.pop(0)
-
-        # 포지션이 종료된 경우가 있기 때문에 다시 가져오기
-        position = await get_position(key, secret, symbol)
-        positionAmt = float(position["positionAmt"])
-        [balance, available] = await get_balance(key, secret)
+            elif short_cnt > 3:
+                await tp_sl(key, secret, symbol, "BUY", positionAmt)
+                logging.info(f"{symbol} {interval} short position close {positionAmt}")
 
         # 해당 포지션이 없고 마진이 있는 경우 포지션 진입
-        if positionAmt == 0 and (balance * (ratio / 100) < available):
+        elif positionAmt == 0 and (balance * (ratio / 100) < available):
+
+            short_cnt = 0
 
             # 롱
             if long or div_long:
@@ -139,7 +117,6 @@ async def main(symbol, leverage, interval):
 
             # 숏
             elif short or div_short:
-
                 await cancel_orders(key, secret, symbol)
                 logging.info(f"{symbol} open orders cancel")
 
