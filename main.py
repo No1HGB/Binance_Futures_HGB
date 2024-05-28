@@ -79,7 +79,7 @@ async def main(symbol, leverage, interval):
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position all close")
 
-            elif short_cnt > 3:
+            elif short_cnt >= 3:
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position close {positionAmt}")
 
