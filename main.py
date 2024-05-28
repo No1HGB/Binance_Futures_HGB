@@ -57,7 +57,6 @@ async def main(symbol, leverage, interval):
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
-        [balance, available] = await get_balance(key, secret)
 
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
@@ -83,8 +82,13 @@ async def main(symbol, leverage, interval):
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position close {positionAmt}")
 
+        # 포지션 종료된 경우 다시 가져오기
+        position = await get_position(key, secret, symbol)
+        positionAmt = float(position["positionAmt"])
+        [balance, available] = await get_balance(key, secret)
+
         # 해당 포지션이 없고 마진이 있는 경우 포지션 진입
-        elif positionAmt == 0 and (balance * (ratio / 100) < available):
+        if positionAmt == 0 and (balance * (ratio / 100) < available):
 
             short_cnt = 0
 
