@@ -109,6 +109,8 @@ def just_long(data: pd.DataFrame, symbol: str) -> bool:
         up_tail_ratio = (last_row["high"] - last_row["up"]) / abs(
             last_row["open"] - last_row["close"]
         )
+    if abs(last_row["high"] - last_row["up"]) < abs(last_row["down"] - last_row["low"]):
+        up_tail_ratio = 0
 
     if symbol == "BTCUSDT":
         volume_coeff = 1.7
@@ -137,12 +139,6 @@ def just_short(data: pd.DataFrame, symbol: str) -> bool:
     last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
-    down_tail_ratio = 0
-
-    if last_row["down"] > last_row["low"]:
-        down_tail_ratio = (last_row["down"] - last_row["low"]) / abs(
-            last_row["open"] - last_row["close"]
-        )
 
     if symbol == "BTCUSDT":
         volume_coeff = 1.7
@@ -159,7 +155,6 @@ def just_short(data: pd.DataFrame, symbol: str) -> bool:
             volume >= volume_MA * volume_coeff
             and (last_row["avg_price"] - last_two["avg_price"]) < 0
             and last_row["rsi"] > rsi_coeff
-            and down_tail_ratio < 1
         )
 
     return False
