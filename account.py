@@ -77,7 +77,8 @@ async def open_position(
         type="LIMIT",
         price=price,
         quantity=quantity,
-        timeInForce=timestamp,
+        timeInForce="GTD",
+        goodTillDate=timestamp,
     )
     func_sl = partial(
         um_futures_client.new_order,
