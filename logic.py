@@ -51,7 +51,7 @@ def cal_profit_price(entryPrice, side, symbol, positionAmt, balance):
         profit_ratio = ratio_list[2]
 
     entry_minus_stop_abs = (
-        (balance * profit_ratio / 100 - positionAmt * 0.008 / 100)
+        (balance * profit_ratio / 100 - positionAmt * 0.07 / 100)
         / positionAmt
         * entryPrice
     )
@@ -73,10 +73,17 @@ def cal_profit_price(entryPrice, side, symbol, positionAmt, balance):
 
 
 def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
-    stop_ratio = Config.stop_ratio
+    ratio_list = Config.stop_ratio
+
+    if symbol == "BTCUSDT":
+        stop_ratio = ratio_list[0]
+    elif symbol == "ETHUSDT":
+        stop_ratio = ratio_list[1]
+    elif symbol == "SOLUSDT":
+        stop_ratio = ratio_list[2]
 
     entry_minus_stop_abs = (
-        (balance * stop_ratio / 100 - positionAmt * 0.1 / 100)
+        (balance * stop_ratio / 100 - positionAmt * 0.07 / 100)
         / positionAmt
         * entryPrice
     )
@@ -98,63 +105,82 @@ def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
 
 
 # 롱 진입
-def just_long(data: pd.DataFrame, symbol: str) -> bool:
+def just_long(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
     last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
+
     up_tail_ratio = 0
+    down_tail_ratio = 0
+    down_tail_ratio_two = 0
 
     if last_row["high"] > last_row["up"]:
         up_tail_ratio = (last_row["high"] - last_row["up"]) / abs(
             last_row["open"] - last_row["close"]
         )
-    if abs(last_row["high"] - last_row["up"]) < abs(last_row["down"] - last_row["low"]):
-        up_tail_ratio = 0
+    if last_row["low"] < last_row["down"]:
+        down_tail_ratio = (last_row["down"] - last_row["low"]) / abs(
+            last_row["open"] - last_row["close"]
+        )
+    if last_two["low"] < last_two["down"]:
+        down_tail_ratio_two = (last_two["down"] - last_two["low"]) / abs(
+            last_two["open"] - last_two["close"]
+        )
 
-    if symbol == "BTCUSDT":
-        volume_coeff = 1.7
-        rsi_coeff = 71
-    elif symbol == "ETHUSDT":
-        volume_coeff = 1.5
-        rsi_coeff = 71
-    elif symbol == "SOLUSDT":
-        volume_coeff = 1.2
-        rsi_coeff = 71
+    if down_tail_ratio >= up_tail_ratio:
+        up_tail_ratio = 0
 
     if last_row["close"] > last_row["open"]:
         return (
-            volume >= volume_MA * volume_coeff
-            and (last_row["avg_price"] - last_two["avg_price"]) > 0
-            and last_row["rsi"] < rsi_coeff
+            volume >= volume_MA * 1.5
             and up_tail_ratio < 1
+            and (
+                last_row["avg_price"] - last_two["avg_price"] > 0
+                or down_tail_ratio >= 1
+                or down_tail_ratio_two >= 1
+            )
         )
 
     return False
 
 
 # 숏 진입
-def just_short(data: pd.DataFrame, symbol: str) -> bool:
+def just_short(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
     last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
 
-    if symbol == "BTCUSDT":
-        volume_coeff = 1.7
-        rsi_coeff = 37
-    elif symbol == "ETHUSDT":
-        volume_coeff = 1.5
-        rsi_coeff = 37
-    elif symbol == "SOLUSDT":
-        volume_coeff = 1.2
-        rsi_coeff = 37
+    up_tail_ratio = 0
+    down_tail_ratio = 0
+    up_tail_ratio_two = 0
+
+    if last_row["high"] > last_row["up"]:
+        up_tail_ratio = (last_row["high"] - last_row["up"]) / abs(
+            last_row["open"] - last_row["close"]
+        )
+    if last_row["low"] < last_row["down"]:
+        down_tail_ratio = (last_row["down"] - last_row["low"]) / abs(
+            last_row["open"] - last_row["close"]
+        )
+    if last_two["high"] > last_two["up"]:
+        up_tail_ratio_two = (last_two["high"] - last_two["up"]) / abs(
+            last_two["open"] - last_two["close"]
+        )
+
+    if up_tail_ratio >= down_tail_ratio:
+        down_tail_ratio = 0
 
     if last_row["close"] < last_row["open"]:
         return (
-            volume >= volume_MA * volume_coeff
-            and (last_row["avg_price"] - last_two["avg_price"]) < 0
-            and last_row["rsi"] > rsi_coeff
+            volume >= volume_MA * 1.5
+            and down_tail_ratio < 1
+            and (
+                last_row["avg_price"] - last_two["avg_price"] < 0
+                or up_tail_ratio >= 1
+                or up_tail_ratio_two >= 1
+            )
         )
 
     return False

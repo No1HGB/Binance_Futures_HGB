@@ -13,6 +13,7 @@ from logic import (
     calculate_ema,
     calculate_values,
     cal_stop_price,
+    cal_profit_price,
     just_long,
     just_short,
     divergence,
@@ -32,7 +33,6 @@ async def main(symbol, leverage, interval):
     key = Config.key
     secret = Config.secret
     ratio = Config.ratio
-    short_cnt = 0
 
     while True:
         # 정시(+2초)까지 기다리기
@@ -52,45 +52,50 @@ async def main(symbol, leverage, interval):
         last_row = data.iloc[-1]
 
         [div_long, div_short] = divergence(data)
-        long = just_long(data, symbol)
-        short = just_short(data, symbol)
+        long = just_long(data)
+        short = just_short(data)
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
 
+        up_tail_ratio = 0
+        down_tail_ratio = 0
+        if last_row["high"] > last_row["up"]:
+            up_tail_ratio = (last_row["high"] - last_row["up"]) / abs(
+                last_row["open"] - last_row["close"]
+            )
+        if last_row["low"] < last_row["down"]:
+            down_tail_ratio = (last_row["down"] - last_row["low"]) / abs(
+                last_row["open"] - last_row["close"]
+            )
+
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
-            if short or div_short:
+
+            if down_tail_ratio >= up_tail_ratio:
+                up_tail_ratio = 0
+
+            if short or div_short or up_tail_ratio > 1:
                 await tp_sl(key, secret, symbol, "SELL", positionAmt)
                 logging.info(f"{symbol} {interval} long position all close")
-
-            elif last_row["close"] < last_row["open"]:
-                await tp_sl(key, secret, symbol, "SELL", positionAmt)
-                logging.info(f"{symbol} {interval} long position close {positionAmt}")
 
         elif positionAmt < 0:
             positionAmt = abs(positionAmt)
 
-            if last_row["close"] > last_row["open"]:
-                short_cnt += 1
+            if up_tail_ratio >= down_tail_ratio:
+                down_tail_ratio = 0
 
-            if long or div_long:
+            if long or div_long or down_tail_ratio > 1:
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position all close")
 
-            elif short_cnt >= 3 or last_row["rsi"] < 36:
-                await tp_sl(key, secret, symbol, "BUY", positionAmt)
-                logging.info(f"{symbol} {interval} short position close {positionAmt}")
-
-        # 포지션 종료된 경우 다시 가져오기
+        # 포지션 다시 가져오기(종료된 경우)
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
         [balance, available] = await get_balance(key, secret)
 
         # 해당 포지션이 없고 마진이 있는 경우 포지션 진입
         if positionAmt == 0 and (balance * (ratio / 100) < available):
-
-            short_cnt = 0
 
             # 롱
             if long or div_long:
@@ -103,6 +108,7 @@ async def main(symbol, leverage, interval):
                 quantity = format_quantity(raw_quantity, symbol)
                 amount = price * quantity
                 stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
+                profitPrice = cal_profit_price(price, "BUY", symbol, amount, balance)
 
                 await open_position(
                     key,
@@ -111,7 +117,9 @@ async def main(symbol, leverage, interval):
                     "BUY",
                     quantity,
                     "SELL",
+                    price,
                     stopPrice,
+                    profitPrice,
                 )
 
                 # 로그 기록
@@ -129,6 +137,7 @@ async def main(symbol, leverage, interval):
                 quantity = format_quantity(raw_quantity, symbol)
                 amount = price * quantity
                 stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
+                profitPrice = cal_profit_price(price, "SELL", symbol, amount, balance)
 
                 await open_position(
                     key,
@@ -137,7 +146,9 @@ async def main(symbol, leverage, interval):
                     "SELL",
                     quantity,
                     "BUY",
+                    price,
                     stopPrice,
+                    profitPrice,
                 )
 
                 # 로그 기록
