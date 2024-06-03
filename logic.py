@@ -107,40 +107,11 @@ def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
 # 롱 진입
 def just_long(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
-    last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
 
-    up_tail_ratio = 0
-    down_tail_ratio = 0
-    down_tail_ratio_two = 0
-
-    if last_row["high"] > last_row["up"]:
-        up_tail_ratio = (last_row["high"] - last_row["up"]) / abs(
-            last_row["open"] - last_row["close"]
-        )
-    if last_row["low"] < last_row["down"]:
-        down_tail_ratio = (last_row["down"] - last_row["low"]) / abs(
-            last_row["open"] - last_row["close"]
-        )
-    if last_two["low"] < last_two["down"]:
-        down_tail_ratio_two = (last_two["down"] - last_two["low"]) / abs(
-            last_two["open"] - last_two["close"]
-        )
-
-    if down_tail_ratio >= up_tail_ratio:
-        up_tail_ratio = 0
-
     if last_row["close"] > last_row["open"]:
-        return (
-            volume >= volume_MA * 1.5
-            and up_tail_ratio < 1
-            and (
-                last_row["avg_price"] - last_two["avg_price"] > 0
-                or down_tail_ratio >= 1
-                or down_tail_ratio_two >= 1
-            )
-        )
+        return volume >= volume_MA * 1.4 and last_row["rsi"] <= 73
 
     return False
 
@@ -148,40 +119,11 @@ def just_long(data: pd.DataFrame) -> bool:
 # 숏 진입
 def just_short(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
-    last_two = data.iloc[-2]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
 
-    up_tail_ratio = 0
-    down_tail_ratio = 0
-    up_tail_ratio_two = 0
-
-    if last_row["high"] > last_row["up"]:
-        up_tail_ratio = (last_row["high"] - last_row["up"]) / abs(
-            last_row["open"] - last_row["close"]
-        )
-    if last_row["low"] < last_row["down"]:
-        down_tail_ratio = (last_row["down"] - last_row["low"]) / abs(
-            last_row["open"] - last_row["close"]
-        )
-    if last_two["high"] > last_two["up"]:
-        up_tail_ratio_two = (last_two["high"] - last_two["up"]) / abs(
-            last_two["open"] - last_two["close"]
-        )
-
-    if up_tail_ratio >= down_tail_ratio:
-        down_tail_ratio = 0
-
     if last_row["close"] < last_row["open"]:
-        return (
-            volume >= volume_MA * 1.5
-            and down_tail_ratio < 1
-            and (
-                last_row["avg_price"] - last_two["avg_price"] < 0
-                or up_tail_ratio >= 1
-                or up_tail_ratio_two >= 1
-            )
-        )
+        return volume >= volume_MA * 1.4 and last_row["rsi"] >= 33
 
     return False
 

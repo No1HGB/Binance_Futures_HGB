@@ -50,6 +50,8 @@ async def main(symbol, leverage, interval):
         data = calculate_values(data)
 
         last_row = data.iloc[-1]
+        volume = last_row["volume"]
+        volume_MA = last_row["volume_MA"]
 
         [div_long, div_short] = divergence(data)
         long = just_long(data)
@@ -58,34 +60,17 @@ async def main(symbol, leverage, interval):
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
 
-        up_tail_ratio = 0
-        down_tail_ratio = 0
-        if last_row["high"] > last_row["up"]:
-            up_tail_ratio = (last_row["high"] - last_row["up"]) / abs(
-                last_row["open"] - last_row["close"]
-            )
-        if last_row["low"] < last_row["down"]:
-            down_tail_ratio = (last_row["down"] - last_row["low"]) / abs(
-                last_row["open"] - last_row["close"]
-            )
-
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
 
-            if down_tail_ratio >= up_tail_ratio:
-                up_tail_ratio = 0
-
-            if short or div_short or up_tail_ratio > 1:
+            if last_row["close"] < last_row["open"] and volume >= volume_MA * 2:
                 await tp_sl(key, secret, symbol, "SELL", positionAmt)
                 logging.info(f"{symbol} {interval} long position all close")
 
         elif positionAmt < 0:
             positionAmt = abs(positionAmt)
 
-            if up_tail_ratio >= down_tail_ratio:
-                down_tail_ratio = 0
-
-            if long or div_long or down_tail_ratio > 1:
+            if last_row["close"] > last_row["open"] and volume >= volume_MA * 2:
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position all close")
 
@@ -97,11 +82,11 @@ async def main(symbol, leverage, interval):
         # 해당 포지션이 없고 마진이 있는 경우 포지션 진입
         if positionAmt == 0 and (balance * (ratio / 100) < available):
 
+            await cancel_orders(key, secret, symbol)
+            logging.info(f"{symbol} open orders cancel")
+
             # 롱
             if long or div_long:
-
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
@@ -129,8 +114,6 @@ async def main(symbol, leverage, interval):
 
             # 숏
             elif short or div_short:
-                await cancel_orders(key, secret, symbol)
-                logging.info(f"{symbol} open orders cancel")
 
                 price = last_row["close"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
