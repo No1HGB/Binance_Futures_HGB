@@ -12,7 +12,7 @@ position = 0  # 포지션: 0 - 없음, 1 - 매수, -1 - 매도
 entry_price = 0
 
 # 익절, 손절 조건 설정 (비율)
-take_profit_ratio = 0.02
+take_profit_ratio = 0.03
 stop_loss_ratio = 0.01
 
 # 백테스트 결과를 저장할 변수 초기화

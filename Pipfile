@@ -10,6 +10,7 @@ pandas = "*"
 python-dotenv = "*"
 requests = "*"
 pytz = "*"
+prophet = "*"
 
 [dev-packages]
 black = "*"

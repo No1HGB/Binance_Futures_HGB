@@ -9,7 +9,7 @@ def just_long(df: pd.DataFrame, i):
         return (
             volume >= volume_MA * 1.5
             and df.at[i, "rsi"] <= 73
-            and df.at[i, "close"] > df.at[i, "EMA50"]
+            and df.at[i, "avg_price"] > df.at[i - 1, "avg_price"]
         )
 
     return False
@@ -23,7 +23,7 @@ def just_short(df: pd.DataFrame, i) -> bool:
         return (
             volume >= volume_MA * 1.5
             and df.at[i, "rsi"] >= 33
-            and df.at[i, "close"] < df.at[i, "EMA50"]
+            and df.at[i, "avg_price"] < df.at[i - 1, "avg_price"]
         )
 
     return False
