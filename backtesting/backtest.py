@@ -12,20 +12,23 @@ position = 0  # 포지션: 0 - 없음, 1 - 매수, -1 - 매도
 entry_price = 0
 
 # 익절, 손절 조건 설정 (비율)
-take_profit_ratio = 0.01
+take_profit_ratio = 0.02
 stop_loss_ratio = 0.01
 
 # 백테스트 결과를 저장할 변수 초기화
 win_count = 0
 loss_count = 0
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=15000)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=17000)
+df["EMA10"] = calculate_ema(df, 10)
+df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
+df["EMA200"] = calculate_ema(df, 200)
 df = calculate_values(df)
 
 
 # 백테스트 실행
-for i in range(1500, len(df)):
+for i in range(1000, len(df)):
     if capital <= 0:
         break
 
@@ -99,6 +102,7 @@ for i in range(1500, len(df)):
             margin = capital / 4
             capital -= margin * leverage * (0.02 / 100)
             entry_price = df.at[i, "close"]
+
         elif short:
             position = -1
             margin = capital / 4
