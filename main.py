@@ -5,18 +5,21 @@ from util import (
     wait_until_next_interval,
     format_quantity,
 )
+from calculation import (
+    calculate_ema,
+    calculate_values,
+)
 from market import (
     server_connect,
     fetch_data,
 )
 from logic import (
-    calculate_ema,
-    calculate_values,
     cal_stop_price,
     cal_profit_price,
-    just_long,
-    just_short,
-    divergence,
+    trend_long,
+    trend_short,
+    reverse_long,
+    reverse_short,
 )
 from account import (
     get_position,
@@ -33,6 +36,7 @@ async def main(symbol, leverage, interval):
     key = Config.key
     secret = Config.secret
     ratio = Config.ratio
+    start = 0
 
     while True:
         # 정시(+2초)까지 기다리기
@@ -40,7 +44,9 @@ async def main(symbol, leverage, interval):
         logging.info(f"{symbol} {interval} next interval")
 
         # 해당 심볼 레버리지 변경
-        await change_leverage(key, secret, symbol, leverage)
+        if start == 0:
+            await change_leverage(key, secret, symbol, leverage)
+            start += 1
 
         # 데이터 업데이트
         data = await fetch_data(symbol, interval)
@@ -50,12 +56,11 @@ async def main(symbol, leverage, interval):
         data = calculate_values(data)
 
         last_row = data.iloc[-1]
-        volume = last_row["volume"]
-        volume_MA = last_row["volume_MA"]
 
-        [div_long, div_short] = divergence(data)
-        long = just_long(data)
-        short = just_short(data)
+        t_long = trend_long(data)
+        t_short = trend_short(data)
+        r_long = reverse_long(data)
+        r_short = reverse_short(data)
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
@@ -63,18 +68,18 @@ async def main(symbol, leverage, interval):
         # 해당 포지션이 있는 경우, 포지션 종료 로직
         if positionAmt > 0:
 
-            if last_row["close"] < last_row["open"] and volume >= volume_MA * 2:
+            if t_short or r_short:
                 await tp_sl(key, secret, symbol, "SELL", positionAmt)
                 logging.info(f"{symbol} {interval} long position all close")
 
         elif positionAmt < 0:
             positionAmt = abs(positionAmt)
 
-            if last_row["close"] > last_row["open"] and volume >= volume_MA * 2:
+            if t_long or r_long:
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position all close")
 
-        # 포지션 다시 가져오기(종료된 경우)
+        # 포지션 다시 가져오기(종료된 경우 고려)
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])
         [balance, available] = await get_balance(key, secret)
@@ -86,14 +91,13 @@ async def main(symbol, leverage, interval):
             logging.info(f"{symbol} open orders cancel")
 
             # 롱
-            if long or div_long:
+            if t_long or r_long:
 
                 price = last_row["close"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "BUY", symbol, amount, balance)
-                profitPrice = cal_profit_price(price, "BUY", symbol, amount, balance)
+                stopPrice = cal_stop_price(price, "BUY", symbol)
+                profitPrice = cal_profit_price(price, "BUY", symbol)
 
                 await open_position(
                     key,
@@ -102,25 +106,23 @@ async def main(symbol, leverage, interval):
                     "BUY",
                     quantity,
                     "SELL",
-                    price,
                     stopPrice,
                     profitPrice,
                 )
 
                 # 로그 기록
                 logging.info(
-                    f"{symbol} {interval} long position open. div_long:{div_long}"
+                    f"{symbol} {interval} long position open. t:{t_long}, r:{r_long}"
                 )
 
             # 숏
-            elif short or div_short:
+            elif t_short or r_short:
 
                 price = last_row["close"]
                 raw_quantity = balance * (ratio / 100) / price * leverage
                 quantity = format_quantity(raw_quantity, symbol)
-                amount = price * quantity
-                stopPrice = cal_stop_price(price, "SELL", symbol, amount, balance)
-                profitPrice = cal_profit_price(price, "SELL", symbol, amount, balance)
+                stopPrice = cal_stop_price(price, "SELL", symbol)
+                profitPrice = cal_profit_price(price, "SELL", symbol)
 
                 await open_position(
                     key,
@@ -129,27 +131,26 @@ async def main(symbol, leverage, interval):
                     "SELL",
                     quantity,
                     "BUY",
-                    price,
                     stopPrice,
                     profitPrice,
                 )
 
                 # 로그 기록
                 logging.info(
-                    f"{symbol} {interval} short position open. div_short:{div_short}"
+                    f"{symbol} {interval} short position open. t:{t_short}, r:{r_short}"
                 )
 
 
 symbols = Config.symbols
-leverages = Config.leverages
+leverage = Config.leverage
 interval = Config.interval
 
 
 async def run_multiple_tasks():
     # 여러 매개변수로 main 함수를 비동기적으로 실행
     await asyncio.gather(
-        main(symbols[0], leverages[0], interval),
-        main(symbols[1], leverages[1], interval),
+        main(symbols[0], leverage, interval),
+        main(symbols[1], leverage, interval),
     )
 
 

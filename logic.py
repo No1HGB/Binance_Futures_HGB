@@ -1,133 +1,106 @@
-import numpy as np
 import pandas as pd
 import Config
 
 
-# EMA 계산
-def calculate_ema(data: pd.DataFrame, days, smoothing=2):
-    alpha = smoothing / (days + 1)
-    return data["close"].ewm(alpha=alpha, adjust=False).mean()
-
-
-# RSI 계산
-def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
-    # 원본 DataFrame을 변경하지 않기 위해 복사본을 사용
-    temp_df = df.copy()
-
-    # 가격 변동 계산
-    temp_df["delta"] = temp_df["close"] - temp_df["close"].shift(1)
-
-    # 이익과 손실 분리
-    temp_df["gain"] = np.where(temp_df["delta"] >= 0, temp_df["delta"], 0)
-    temp_df["loss"] = np.where(temp_df["delta"] < 0, temp_df["delta"].abs(), 0)
-
-    # 평균 이익과 손실 계산
-    temp_df["avg_gain"] = temp_df["gain"].ewm(alpha=1 / 14, min_periods=14).mean()
-    temp_df["avg_loss"] = temp_df["loss"].ewm(alpha=1 / 14, min_periods=14).mean()
-
-    # RSI 계산
-    temp_df["rsi"] = (
-        temp_df["avg_gain"] / (temp_df["avg_gain"] + temp_df["avg_loss"]) * 100
-    )
-
-    # 원래 DataFrame에 'rsi',"up","down","volume_MA","avg_price" 추가
-    df["rsi"] = temp_df["rsi"]
-    df["up"] = np.maximum(df["open"], df["close"])
-    df["down"] = np.minimum(df["open"], df["close"])
-    df["volume_MA"] = df["volume"].rolling(window=50).mean()
-    df["avg_price"] = (df["open"] + df["close"]) / 2
-
-    return df
-
-
-def cal_profit_price(entryPrice, side, symbol, positionAmt, balance):
-    ratio_list = Config.profit_ratio
-
-    if symbol == "BTCUSDT":
-        profit_ratio = ratio_list[0]
-    elif symbol == "ETHUSDT":
-        profit_ratio = ratio_list[1]
-    elif symbol == "SOLUSDT":
-        profit_ratio = ratio_list[2]
-
-    entry_minus_stop_abs = (
-        (balance * profit_ratio / 100 - positionAmt * 0.07 / 100)
-        / positionAmt
-        * entryPrice
-    )
+def cal_profit_price(entryPrice, side, symbol):
+    profit_ratio = Config.profit_ratio
 
     if side == "BUY":
-        stopPrice = entryPrice + entry_minus_stop_abs
+        stopPrice = entryPrice * (1 + profit_ratio / 100)
 
     elif side == "SELL":
-        stopPrice = entryPrice - entry_minus_stop_abs
+        stopPrice = entryPrice * (1 - profit_ratio / 100)
 
     if symbol == "BTCUSDT":
         stopPrice = round(stopPrice, 1)
     elif symbol == "ETHUSDT":
         stopPrice = round(stopPrice, 2)
-    elif symbol == "SOLUSDT":
-        stopPrice = round(stopPrice, 3)
 
     return stopPrice
 
 
-def cal_stop_price(entryPrice, side, symbol, positionAmt, balance):
-    ratio_list = Config.stop_ratio
-
-    if symbol == "BTCUSDT":
-        stop_ratio = ratio_list[0]
-    elif symbol == "ETHUSDT":
-        stop_ratio = ratio_list[1]
-    elif symbol == "SOLUSDT":
-        stop_ratio = ratio_list[2]
-
-    entry_minus_stop_abs = (
-        (balance * stop_ratio / 100 - positionAmt * 0.07 / 100)
-        / positionAmt
-        * entryPrice
-    )
+def cal_stop_price(entryPrice, side, symbol):
+    stop_ratio = Config.stop_ratio
 
     if side == "BUY":
-        stopPrice = entryPrice - entry_minus_stop_abs
+        stopPrice = entryPrice * (1 - stop_ratio / 100)
 
     elif side == "SELL":
-        stopPrice = entryPrice + entry_minus_stop_abs
+        stopPrice = entryPrice * (1 + stop_ratio / 100)
 
     if symbol == "BTCUSDT":
         stopPrice = round(stopPrice, 1)
     elif symbol == "ETHUSDT":
         stopPrice = round(stopPrice, 2)
-    elif symbol == "SOLUSDT":
-        stopPrice = round(stopPrice, 3)
 
     return stopPrice
 
 
-# 롱 진입
-def just_long(data: pd.DataFrame) -> bool:
+def trend_long(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
 
     if last_row["close"] > last_row["open"]:
-        return volume >= volume_MA * 1.4 and last_row["rsi"] <= 73
+        return (
+            volume >= volume_MA * 1.5
+            and last_row["close"] > last_row["EMA50"]
+            and last_row["open"] < last_row["EMA50"]
+        )
 
     return False
 
 
-# 숏 진입
-def just_short(data: pd.DataFrame) -> bool:
+def trend_short(data: pd.DataFrame) -> bool:
     last_row = data.iloc[-1]
     volume = last_row["volume"]
     volume_MA = last_row["volume_MA"]
 
     if last_row["close"] < last_row["open"]:
-        return volume >= volume_MA * 1.4 and last_row["rsi"] >= 33
+        return (
+            volume >= volume_MA * 1.5
+            and last_row["close"] < last_row["EMA50"]
+            and last_row["open"] > last_row["EMA50"]
+        )
 
     return False
 
 
+def reverse_long(data: pd.DataFrame) -> bool:
+    last_row = data.iloc[-1]
+    last_two = data.iloc[-2]
+    last_three = data.iloc[-3]
+    volume = last_row["volume"]
+    volume_MA = last_row["volume_MA"]
+
+    if last_row["close"] > last_row["open"]:
+        return (
+            volume >= volume_MA * 1.5
+            and last_row["avg_price"] > last_two["avg_price"]
+            and last_two["avg_price"] < last_three["avg_price"]
+        )
+
+    return False
+
+
+def reverse_short(data: pd.DataFrame) -> bool:
+    last_row = data.iloc[-1]
+    last_two = data.iloc[-2]
+    last_three = data.iloc[-3]
+    volume = last_row["volume"]
+    volume_MA = last_row["volume_MA"]
+
+    if last_row["close"] < last_row["open"]:
+        return (
+            volume >= volume_MA * 1.5
+            and last_row["avg_price"] < last_two["avg_price"]
+            and last_two["avg_price"] > last_three["avg_price"]
+        )
+
+    return False
+
+
+"""
 def divergence(df: pd.DataFrame) -> list:
     # 가격 극대값과 극소값 찾기
     price_max_peaks = df[
@@ -229,3 +202,4 @@ def divergence(df: pd.DataFrame) -> list:
             divergence_long = True
 
     return [divergence_long, divergence_short]
+"""

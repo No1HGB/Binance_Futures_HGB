@@ -18,7 +18,7 @@ def server_connect() -> bool:
         return False
 
 
-# 과거 721개 데이터 불러오기
+# 과거 700개 데이터 불러오기
 async def fetch_data(symbol, interval) -> pd.DataFrame:
     loop = asyncio.get_running_loop()
     client = UMFutures()
@@ -26,7 +26,7 @@ async def fetch_data(symbol, interval) -> pd.DataFrame:
         client.klines,
         symbol=symbol,
         interval=interval,
-        limit=722,
+        limit=700,
     )
     try:
         bars = await loop.run_in_executor(None, func)

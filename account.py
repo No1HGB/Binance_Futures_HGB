@@ -1,4 +1,4 @@
-import logging, datetime, math, asyncio
+import logging, asyncio
 from binance.um_futures import UMFutures
 from binance.error import ClientError
 from functools import partial
@@ -62,23 +62,17 @@ async def change_leverage(key, secret, symbol, leverage):
 
 
 async def open_position(
-    key, secret, symbol, side, quantity, stopSide, price, stopPrice, profitPrice
+    key, secret, symbol, side, quantity, stopSide, stopPrice, profitPrice
 ):
     loop = asyncio.get_running_loop()
-    now_timestamp = datetime.datetime.now(datetime.UTC).timestamp() * 1000
-    timestamp = now_timestamp + (59 * 60 * 1000)
-    timestamp = math.floor(timestamp)
 
     um_futures_client = UMFutures(key=key, secret=secret)
     func_open = partial(
         um_futures_client.new_order,
         symbol=symbol,
         side=side,
-        type="LIMIT",
-        price=price,
+        type="MARKET",
         quantity=quantity,
-        timeInForce="GTD",
-        goodTillDate=timestamp,
     )
     func_sl = partial(
         um_futures_client.new_order,
@@ -88,6 +82,7 @@ async def open_position(
         quantity=quantity,
         price=stopPrice,
         stopPrice=stopPrice,
+        reduceOnly="true",
     )
     func_tp = partial(
         um_futures_client.new_order,
@@ -97,6 +92,7 @@ async def open_position(
         quantity=quantity,
         price=profitPrice,
         stopPrice=profitPrice,
+        reduceOnly="true",
     )
     try:
         await loop.run_in_executor(None, func_open)
