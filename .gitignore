@@ -6,6 +6,3 @@ test.py
 nohup.out
 data.csv
 images/
-backtesting/backtest_btc.py
-backtesting/backtest_eth.py
-backtesting/entry_logic.py
