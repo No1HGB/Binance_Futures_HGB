@@ -6,13 +6,13 @@ from sklearn.preprocessing import MinMaxScaler
 # 데이터 로드 및 정규화
 data = pd.read_csv("backtesting/data/data.csv")
 data.drop(columns="time", inplace=True)
-data.drop(data.index[-64:], inplace=True)
+data.drop(data.index[-51:], inplace=True)
 print(data.iloc[-1]["delta"])
 # scaler = MinMaxScaler()
 data.replace([np.inf, -np.inf], np.nan, inplace=True)
 data.fillna(data.mean(), inplace=True)
 data_normalized = data.copy()
-data_points = ["delta", "volume_R"] + [f"delta{i}" for i in range(1, 14)]
+data_points = ["delta", "volume_R"] + [f"delta{i}" for i in range(1, 120)]
 # data_normalized[data_points] = scaler.fit_transform(data[data_points])
 
 # Using NearestNeighbors to find the closest patterns

@@ -33,6 +33,22 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
     df["rsi"] = temp_df["rsi"]
     df["up"] = np.maximum(df["open"], df["close"])
     df["down"] = np.minimum(df["open"], df["close"])
+    df["up_tail"] = df.apply(
+        lambda row: (
+            0
+            if row["close"] == row["open"]
+            else abs(row["high"] - row["up"]) / abs(row["open"] - row["close"])
+        ),
+        axis=1,
+    )
+    df["down_tail"] = df.apply(
+        lambda row: (
+            0
+            if row["close"] == row["open"]
+            else abs(row["low"] - row["down"]) / abs(row["open"] - row["close"])
+        ),
+        axis=1,
+    )
     df["volume_MA"] = df["volume"].rolling(window=50).mean()
     df["avg_price"] = (df["open"] + df["close"]) / 2
 
