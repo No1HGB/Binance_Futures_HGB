@@ -14,19 +14,19 @@ from entry_logic import (
 initial_capital = 1000
 capital = initial_capital
 margin = 0
-leverage = 10
+leverage = 5
 position = 0  # 포지션: 0 - 없음, 1 - 매수, -1 - 매도
 entry_price = 0
 
 # 익절, 손절 조건 설정 (비율)
-take_profit_ratio = 0.03
+take_profit_ratio = 0.02
 stop_loss_ratio = 0.01
 
 # 백테스트 결과를 저장할 변수 초기화
 win_count = 0
 loss_count = 0
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=720)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=8770)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
@@ -35,7 +35,7 @@ df = calculate_values(df)
 
 
 # 백테스트 실행
-for i in range(10, len(df)):
+for i in range(70, len(df)):
     if capital <= 0:
         break
 

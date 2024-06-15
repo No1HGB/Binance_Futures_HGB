@@ -11,6 +11,7 @@ python-dotenv = "*"
 requests = "*"
 pytz = "*"
 prophet = "*"
+openpyxl = "*"
 
 [dev-packages]
 black = "*"

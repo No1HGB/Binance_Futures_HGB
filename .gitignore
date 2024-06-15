@@ -2,7 +2,12 @@
 docs.txt
 __pycache__/
 logs/
-test.py
-nohup.out
-data.csv
 images/
+data/
+backtesting/data/
+papers/
+strategy.txt
+
+nohup.out
+test.py
+test2.py
