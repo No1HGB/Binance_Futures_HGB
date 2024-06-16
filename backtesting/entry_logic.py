@@ -140,3 +140,47 @@ def ha_short(df: pd.DataFrame, i, v_coff) -> bool:
         < (df.at[i - 1, "ha_close"] + df.at[i - 1, "ha_open"]) / 2
         and df.at[i, "volume"] >= df.at[i, "volume_MA"] * v_coff
     )
+
+
+def maker_long(df: pd.DataFrame, i, v_coff) -> bool:
+    return (
+        df.at[i, "close"] > df.at[i, "open"]
+        and df.at[i, "volume"] >= df.at[i, "volume_MA"] * v_coff
+        and df.at[i, "maker_buy"] < df.at[i, "taker_buy"]
+        and df.at[i, "avg_price"] > df.at[i - 1, "avg_price"]
+    )
+
+
+def maker_short(df: pd.DataFrame, i, v_coff) -> bool:
+    return (
+        df.at[i, "close"] < df.at[i, "open"]
+        and df.at[i, "volume"] >= df.at[i, "volume_MA"] * v_coff
+        and df.at[i, "maker_buy"] > df.at[i, "taker_buy"]
+        and df.at[i, "avg_price"] < df.at[i - 1, "avg_price"]
+    )
+
+
+def stop_long(df: pd.DataFrame, i) -> bool:
+    # 비정상 롱
+    if df.at[i, "close"] > df.at[i, "open"]:
+        return df.at[i, "maker_buy"] > df.at[i, "taker_buy"]
+    # 정상 숏
+    elif df.at[i, "close"] < df.at[i, "open"]:
+        return (
+            df.at[i, "maker_buy"] > df.at[i, "taker_buy"]
+            and df.at[i, "avg_price"] < df.at[i - 1, "avg_price"]
+        )
+    return False
+
+
+def stop_short(df: pd.DataFrame, i) -> bool:
+    # 비정상 숏
+    if df.at[i, "close"] < df.at[i, "open"]:
+        return df.at[i, "maker_buy"] < df.at[i, "taker_buy"]
+    # 정상 롱
+    elif df.at[i, "close"] > df.at[i, "open"]:
+        return (
+            df.at[i, "maker_buy"] < df.at[i, "taker_buy"]
+            and df.at[i, "avg_price"] > df.at[i - 1, "avg_price"]
+        )
+    return False

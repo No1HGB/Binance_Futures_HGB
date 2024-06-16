@@ -14,6 +14,7 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
     df["down"] = np.minimum(df["open"], df["close"])
     df["volume_MA"] = df["volume"].rolling(window=50).mean()
     df["avg_price"] = (df["open"] + df["close"]) / 2
+    df["maker_buy"] = df["volume"] - df["taker_buy"]
 
     # 하이킨아시
     df["ha_close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4

@@ -33,13 +33,13 @@ def fetch_one_data(symbol, interval, endTime, limit):
             "close_time",
             "quote_asset_volume",
             "number_of_trades",
-            "taker_buy_base_asset_volume",
             "taker_buy_quote_asset_volume",
             "ignore",
         ],
         axis=1,
         inplace=True,
     )
+    df.rename(columns={"taker_buy_base_asset_volume": "taker_buy"}, inplace=True)
 
     # 모든 열을 숫자형으로 변환
     for column in df.columns:

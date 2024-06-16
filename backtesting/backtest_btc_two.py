@@ -30,7 +30,7 @@ loss_count = 0
 
 volume_coff = 1.5
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=8000)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=790)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
@@ -126,13 +126,12 @@ for i in range(70, len(df)):
             margin = capital / 4
             capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
-        """
-        elif h_t_short or m_long:
+
+        elif h_t_short or m_short:
             position = -1
             margin = capital / 4
             capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
-        """
 
 # 백테스트 결과 계산
 total_trades = win_count + loss_count
