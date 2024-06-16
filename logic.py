@@ -36,65 +36,63 @@ def cal_stop_price(entryPrice, side, symbol):
     return stopPrice
 
 
-def trend_long(data: pd.DataFrame) -> bool:
-    last_row = data.iloc[-1]
-    volume = last_row["volume"]
-    volume_MA = last_row["volume_MA"]
-
-    if last_row["close"] > last_row["open"]:
-        return (
-            volume >= volume_MA * 1.5
-            and last_row["close"] > last_row["EMA50"]
-            and last_row["open"] < last_row["EMA50"]
-        )
-
-    return False
-
-
-def trend_short(data: pd.DataFrame) -> bool:
-    last_row = data.iloc[-1]
-    volume = last_row["volume"]
-    volume_MA = last_row["volume_MA"]
-
-    if last_row["close"] < last_row["open"]:
-        return (
-            volume >= volume_MA * 1.5
-            and last_row["close"] < last_row["EMA50"]
-            and last_row["open"] > last_row["EMA50"]
-        )
-
-    return False
-
-
-def reverse_long(data: pd.DataFrame) -> bool:
+def reverse_long(data: pd.DataFrame, i, v_coff=1.5) -> bool:
     last_row = data.iloc[-1]
     last_two = data.iloc[-2]
-    last_three = data.iloc[-3]
-    volume = last_row["volume"]
-    volume_MA = last_row["volume_MA"]
+    return (
+        last_row["close"] > last_row["open"]
+        and last_row["close"] < last_row["EMA50"]
+        and (
+            last_row["volume"] >= last_row["volume_MA"] * v_coff
+            or (
+                last_two["volume"] >= last_two["volume_MA"] * v_coff
+                and last_two["close"] > last_two["open"]
+            )
+        )
+        and last_row["avg_price"] > last_two["avg_price"]
+    )
 
-    if last_row["close"] > last_row["open"]:
+
+def reverse_short(data: pd.DataFrame, i, v_coff) -> bool:
+    last_row = data.iloc[-1]
+    last_two = data.iloc[-2]
+    return (
+        last_row["close"] < last_row["open"]
+        and last_row["close"] > last_row["EMA50"]
+        and (
+            last_row["volume"] >= last_row["volume_MA"] * v_coff
+            or (
+                last_two["volume"] >= last_two["volume_MA"] * v_coff
+                and last_two["close"] < last_two["open"]
+            )
+        )
+        and last_row["avg_price"] < last_two["avg_price"]
+    )
+
+
+def just_long(df: pd.DataFrame, i) -> bool:
+    volume = df.at[i, "volume"]
+    volume_MA = df.at[i, "volume_MA"]
+
+    if df.at[i, "close"] > df.at[i, "open"]:
         return (
             volume >= volume_MA * 1.5
-            and last_row["avg_price"] > last_two["avg_price"]
-            and last_two["avg_price"] < last_three["avg_price"]
+            and df.at[i, "close"] > df.at[i, "EMA50"]
+            and df.at[i, "open"] < df.at[i, "EMA50"]
         )
 
     return False
 
 
-def reverse_short(data: pd.DataFrame) -> bool:
-    last_row = data.iloc[-1]
-    last_two = data.iloc[-2]
-    last_three = data.iloc[-3]
-    volume = last_row["volume"]
-    volume_MA = last_row["volume_MA"]
+def just_short(df: pd.DataFrame, i) -> bool:
+    volume = df.at[i, "volume"]
+    volume_MA = df.at[i, "volume_MA"]
 
-    if last_row["close"] < last_row["open"]:
+    if df.at[i, "close"] < df.at[i, "open"]:
         return (
             volume >= volume_MA * 1.5
-            and last_row["avg_price"] < last_two["avg_price"]
-            and last_two["avg_price"] > last_three["avg_price"]
+            and df.at[i, "close"] < df.at[i, "EMA50"]
+            and df.at[i, "open"] > df.at[i, "EMA50"]
         )
 
     return False

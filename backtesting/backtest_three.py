@@ -2,14 +2,8 @@ import pandas as pd
 from fetch import fetch_data
 from calculate import calculate_ema, calculate_values
 from entry_logic import (
-    reverse_long,
-    middle_long,
-    ha_trend_long,
-    reverse_short,
-    middle_short,
-    ha_trend_short,
-    simple_long,
-    simple_short,
+    ha_long,
+    ha_short,
 )
 
 # 초기 자금 설정
@@ -30,7 +24,7 @@ loss_count = 0
 
 volume_coff = 1.5
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=8000)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=8070)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
@@ -41,37 +35,15 @@ for i in range(70, len(df)):
     if capital <= 0:
         break
 
-    r_long = reverse_long(df, i, 1.5)
-    m_long = middle_long(df, i, volume_coff)
-    h_t_long = ha_trend_long(df, i, volume_coff)
-
-    r_short = reverse_short(df, i, 1.5)
-    m_short = middle_short(df, i, volume_coff)
-    h_t_short = ha_trend_short(df, i, volume_coff)
-
-    s_long = simple_long(df, i)
-    s_short = simple_short(df, i)
+    h_long = ha_long(df, i, volume_coff)
+    h_short = ha_short(df, i, volume_coff)
 
     if position == 1:
 
         # 숏 조건인 경우
-        if r_short or m_short or h_t_short:
-            take_profit_ratio = abs(df.at[i, "close"] - entry_price) / entry_price
-            profit = margin * leverage * take_profit_ratio
-            if entry_price < df.at[i, "close"]:
-                capital += profit
-                win_count += 1
-                margin = 0
-                position = 0
-
-            elif entry_price > df.at[i, "close"]:
-                capital -= profit
-                loss_count += 1
-                margin = 0
-                position = 0
-
-        # 하이킨아시 역봉
-        elif df.at[i, "ha_open"] > df.at[i, "ha_close"]:
+        if (df.at[i, "ha_close"] + df.at[i, "ha_open"]) / 2 < (
+            df.at[i - 1, "ha_close"] + df.at[i - 1, "ha_open"]
+        ) / 2:
             take_profit_ratio = abs(df.at[i, "close"] - entry_price) / entry_price
             profit = margin * leverage * take_profit_ratio
             if entry_price < df.at[i, "close"]:
@@ -89,23 +61,9 @@ for i in range(70, len(df)):
     elif position == -1:
 
         # 롱 조건인 경우
-        if r_long or m_long or h_t_long:
-            take_profit_ratio = abs(df.at[i, "close"] - entry_price) / entry_price
-            profit = margin * leverage * take_profit_ratio
-            if entry_price > df.at[i, "close"]:
-                capital += profit
-                win_count += 1
-                margin = 0
-                position = 0
-
-            elif entry_price < df.at[i, "close"]:
-                capital -= profit
-                loss_count += 1
-                margin = 0
-                position = 0
-
-        # 하이킨아시 역봉
-        elif df.at[i, "ha_open"] < df.at[i, "ha_close"]:
+        if (df.at[i, "ha_close"] + df.at[i, "ha_open"]) / 2 > (
+            df.at[i - 1, "ha_close"] + df.at[i - 1, "ha_open"]
+        ) / 2:
             take_profit_ratio = abs(df.at[i, "close"] - entry_price) / entry_price
             profit = margin * leverage * take_profit_ratio
             if entry_price > df.at[i, "close"]:
@@ -121,18 +79,18 @@ for i in range(70, len(df)):
                 position = 0
 
     if position == 0:  # 포지션이 없다면
-        if h_t_long or m_long:
+        if h_long:
             position = 1
             margin = capital / 4
             capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
-        """
-        elif h_t_short or m_long:
+
+        elif h_short:
             position = -1
             margin = capital / 4
             capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
-        """
+
 
 # 백테스트 결과 계산
 total_trades = win_count + loss_count

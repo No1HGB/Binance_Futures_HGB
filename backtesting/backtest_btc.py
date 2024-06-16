@@ -4,10 +4,6 @@ from calculate import calculate_ema, calculate_values
 from entry_logic import (
     just_long,
     just_short,
-    reverse_long,
-    reverse_short,
-    qullamaggi_long,
-    qullamaggi_short,
 )
 
 # 초기 자금 설정
@@ -21,12 +17,13 @@ entry_price = 0
 # 익절, 손절 조건 설정 (비율)
 take_profit_ratio = 0.02
 stop_loss_ratio = 0.01
+volume_coff = 1.5
 
 # 백테스트 결과를 저장할 변수 초기화
 win_count = 0
 loss_count = 0
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=3000)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=1070)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
@@ -61,7 +58,7 @@ for i in range(70, len(df)):
                 margin = 0
                 position = 0
 
-        elif stop_loss_price >= df.at[i, "close"]:
+        elif stop_loss_price >= df.at[i, "low"]:
             loss = margin * leverage * (df.at[i, "close"] - entry_price) / entry_price
             if loss > 0:
                 capital += loss
@@ -110,13 +107,13 @@ for i in range(70, len(df)):
         if long:
             position = 1
             margin = capital / 4
-            capital -= margin * leverage * (0.07 / 100)
+            capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
 
         elif short:
             position = -1
             margin = capital / 4
-            capital -= margin * leverage * (0.07 / 100)
+            capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
 
 

@@ -9,16 +9,17 @@ from entry_logic import (
 )
 
 # 초기 자금 설정
-initial_capital = 354
+initial_capital = 1000
 capital = initial_capital
 margin = 0
-leverage = 5
+leverage = 7
 position = 0  # 포지션: 0 - 없음, 1 - 매수, -1 - 매도
 entry_price = 0
 
 # 익절, 손절 조건 설정 (비율)
 take_profit_ratio = 0.02
-stop_loss_ratio = 0.02
+stop_loss_ratio = 0.01
+volume_coff = 1.5
 
 # 백테스트 결과를 저장할 변수 초기화
 win_count = 0
@@ -39,14 +40,43 @@ for i in range(100, len(df)):
 
     long = just_long(df, i)
     short = just_short(df, i)
-    r_long = reverse_long(df, i)
-    r_short = reverse_short(df, i)
+    r_long = reverse_long(df, i, volume_coff)
+    r_short = reverse_short(df, i, volume_coff)
 
     if position == 1:
 
         take_profit_price = entry_price * (1 + take_profit_ratio)
         stop_loss_price = entry_price * (1 - stop_loss_ratio)
-        if short or r_short:
+
+        if take_profit_price <= df.at[i, "high"]:
+            profit = (
+                margin * leverage * ((take_profit_price - entry_price) / entry_price)
+            )
+            if profit > 0:
+                capital += profit
+                win_count += 1
+                margin = 0
+                position = 0
+            elif profit < 0:
+                capital += profit
+                loss_count += 1
+                margin = 0
+                position = 0
+
+        elif stop_loss_price >= df.at[i, "close"]:
+            loss = margin * leverage * (df.at[i, "close"] - entry_price) / entry_price
+            if loss > 0:
+                capital += loss
+                win_count += 1
+                margin = 0
+                position = 0
+            elif loss < 0:
+                capital += loss
+                loss_count += 1
+                margin = 0
+                position = 0
+
+        elif short or r_short:
             profit_loss = (
                 margin * leverage * (df.at[i, "close"] - entry_price) / entry_price
             )
@@ -56,27 +86,44 @@ for i in range(100, len(df)):
                 margin = 0
                 position = 0
             elif profit_loss < 0:
-                capital -= profit_loss
+                capital += profit_loss
                 loss_count += 1
                 margin = 0
                 position = 0
-        elif stop_loss_price >= df.at[i, "low"]:
-            loss = margin * leverage * stop_loss_ratio
-            capital -= loss
-            loss_count += 1
-            margin = 0
-            position = 0
-        elif take_profit_price <= df.at[i, "high"]:
-            profit = margin * leverage * take_profit_ratio
-            capital += profit
-            win_count += 1
-            margin = 0
-            position = 0
 
     elif position == -1:
         take_profit_price = entry_price * (1 - take_profit_ratio)
         stop_loss_price = entry_price * (1 + stop_loss_ratio)
-        if long or r_long:
+
+        if take_profit_price >= df.at[i, "low"]:
+            profit = (
+                margin * leverage * ((entry_price - take_profit_price) / entry_price)
+            )
+            if profit > 0:
+                capital += profit
+                win_count += 1
+                margin = 0
+                position = 0
+            elif profit < 0:
+                capital += profit
+                loss_count += 1
+                margin = 0
+                position = 0
+
+        elif stop_loss_price <= df.at[i, "close"]:
+            loss = margin * leverage * (entry_price - df.at[i, "close"]) / entry_price
+            if loss > 0:
+                capital += loss
+                win_count += 1
+                margin = 0
+                position = 0
+            elif loss < 0:
+                capital += loss
+                loss_count += 1
+                margin = 0
+                position = 0
+
+        elif long or r_long:
             profit_loss = (
                 margin * leverage * (entry_price - df.at[i, "close"]) / entry_price
             )
@@ -86,34 +133,22 @@ for i in range(100, len(df)):
                 margin = 0
                 position = 0
             elif profit_loss < 0:
-                capital -= profit_loss
+                capital += profit_loss
                 loss_count += 1
                 margin = 0
                 position = 0
-        elif stop_loss_price <= df.at[i, "high"]:
-            loss = margin * leverage * stop_loss_ratio
-            capital -= loss
-            loss_count += 1
-            margin = 0
-            position = 0
-        elif take_profit_price >= df.at[i, "low"]:
-            profit = margin * leverage * take_profit_ratio
-            capital += profit
-            win_count += 1
-            margin = 0
-            position = 0
 
     if position == 0:  # 포지션이 없다면
-        if long or r_long:
+        if long:
             position = 1
             margin = capital / 4
-            capital -= margin * leverage * (0.02 / 100)
+            capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
 
-        elif short or r_short:
+        elif short:
             position = -1
             margin = capital / 4
-            capital -= margin * leverage * (0.02 / 100)
+            capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
 
 
