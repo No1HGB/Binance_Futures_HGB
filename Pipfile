@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-binance-futures-connector = "*"
 numpy = "*"
 pandas = "*"
 python-dotenv = "*"
@@ -12,6 +11,7 @@ requests = "*"
 pytz = "*"
 prophet = "*"
 openpyxl = "*"
+binance-futures-connector = "*"
 
 [dev-packages]
 black = "*"

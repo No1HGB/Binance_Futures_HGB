@@ -16,7 +16,7 @@ from entry_logic import (
 initial_capital = 1000
 capital = initial_capital
 margin = 0
-leverage = 7
+leverage = 5
 position = 0  # 포지션: 0 - 없음, 1 - 매수, -1 - 매도
 entry_price = 0
 
@@ -30,7 +30,7 @@ loss_count = 0
 
 volume_coff = 1.5
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=790)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=1000)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
@@ -43,14 +43,11 @@ for i in range(70, len(df)):
 
     r_long = reverse_long(df, i, 1.5)
     m_long = middle_long(df, i, volume_coff)
-    h_t_long = ha_trend_long(df, i, volume_coff)
+    h_t_long = ha_trend_long(df, i, 1.4)
 
     r_short = reverse_short(df, i, 1.5)
     m_short = middle_short(df, i, volume_coff)
-    h_t_short = ha_trend_short(df, i, volume_coff)
-
-    s_long = simple_long(df, i)
-    s_short = simple_short(df, i)
+    h_t_short = ha_trend_short(df, i, 1.4)
 
     if position == 1:
 
@@ -123,13 +120,13 @@ for i in range(70, len(df)):
     if position == 0:  # 포지션이 없다면
         if h_t_long or m_long:
             position = 1
-            margin = capital / 4
+            margin = capital / 2
             capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
 
         elif h_t_short or m_short:
             position = -1
-            margin = capital / 4
+            margin = capital / 2
             capital -= margin * leverage * (0.1 / 100)
             entry_price = df.at[i, "close"]
 

@@ -1,33 +1,21 @@
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import pandas as pd
 import datetime
 from binance.um_futures import UMFutures
-from calculate import calculate_ema, calculate_values
-from entry_logic import (
-    just_long,
-    just_short,
-    reverse_long,
-    reverse_short,
-    middle_long,
-    middle_short,
-    ha_trend_long,
-    ha_trend_short,
-    simple_long,
-    simple_short,
-    ha_long,
-    ha_short,
-    maker_long,
-    maker_short,
-    stop_long,
-    stop_short,
-)
+from calculate import calculate_ema, calculate_values, cal_resistance
+from openpyxl import load_workbook
 
 
-def fetch_data(symbol, interval, numbers):
+def fetch_one_data(symbol, interval, startTime, endTime):
     client = UMFutures()
     bars = client.klines(
         symbol=symbol,
         interval=interval,
-        limit=numbers,
+        startTime=startTime,
+        endTime=endTime,
     )
     df = pd.DataFrame(
         bars,
@@ -68,7 +56,6 @@ def fetch_data(symbol, interval, numbers):
     return df
 
 
-"""
 startDate_str = input()
 endDate_str = input()
 startDate_time_obj = datetime.datetime.strptime(startDate_str, "%y-%m-%d %H:%M")
@@ -76,38 +63,16 @@ endDate_time_obj = datetime.datetime.strptime(endDate_str, "%y-%m-%d %H:%M")
 # Unix 타임스탬프를 초 단위로 변환 후 밀리초로 변환
 startTime = int(startDate_time_obj.timestamp() * 1000)
 endTime = int(endDate_time_obj.timestamp() * 1000)
-"""
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=1000)
-df["EMA10"] = calculate_ema(df, 10)
-df["EMA20"] = calculate_ema(df, 20)
-df["EMA50"] = calculate_ema(df, 50)
+df: pd.DataFrame = fetch_one_data(
+    symbol="BTCUSDT", interval="1h", startTime=startTime, endTime=endTime
+)
 df = calculate_values(df)
 
-# 새로운 데이터프레임을 생성
-long_rows = []
-short_rows = []
+resistance = cal_resistance(df)
+print(resistance)
 
-
-# 백테스트 실행
-for i in range(70, len(df)):
-    m_long = maker_long(df, i, 1.5)
-    m_short = maker_short(df, i, 1.5)
-
-    if m_long:
-        long_rows.append(df.iloc[i])
-
-    if m_short:
-        short_rows.append(df.iloc[i])
-
-if long_rows:
-    df_long = pd.concat(long_rows, axis=1).T
-
-if short_rows:
-    df_short = pd.concat(short_rows, axis=1).T
-
-# 엑셀 파일로 저장
-file_path = "backtesting/data/strategy.xlsx"
-with pd.ExcelWriter(file_path) as writer:
-    df_long.to_excel(writer, sheet_name="m_long", index=False)
-    df_short.to_excel(writer, sheet_name="m_short", index=False)
+"""
+output_file = "backtesting/data/output.xlsx"
+df.to_excel(output_file, index=False)
+"""
