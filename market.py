@@ -26,7 +26,7 @@ async def fetch_data(symbol, interval) -> pd.DataFrame:
         client.klines,
         symbol=symbol,
         interval=interval,
-        limit=700,
+        limit=377,
     )
     try:
         bars = await loop.run_in_executor(None, func)
@@ -52,13 +52,14 @@ async def fetch_data(symbol, interval) -> pd.DataFrame:
                 "close_time",
                 "quote_asset_volume",
                 "number_of_trades",
-                "taker_buy_base_asset_volume",
                 "taker_buy_quote_asset_volume",
                 "ignore",
             ],
             axis=1,
             inplace=True,
         )
+        df.rename(columns={"taker_buy_base_asset_volume": "taker_buy"}, inplace=True)
+
         # 만약 현재 시간 봉 데이터가 존재하면 마지막 행 제거
         now = datetime.datetime.now(datetime.UTC)
         open_time = int(

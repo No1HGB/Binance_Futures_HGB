@@ -11,6 +11,8 @@ def calculate_ema(data: pd.DataFrame, days, smoothing=2):
 def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
     df["volume_MA"] = df["volume"].rolling(window=50).mean()
     df["avg_price"] = (df["open"] + df["close"]) / 2
+    df["maker_buy"] = df["volume"] - df["taker_buy"]
+    df["volume_R"] = df["volume"] / df["volume_MA"]
 
     # 하이킨아시
     df["ha_close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4

@@ -36,66 +36,122 @@ def cal_stop_price(entryPrice, side, symbol):
     return stopPrice
 
 
-def reverse_long(data: pd.DataFrame, i, v_coff=1.5) -> bool:
-    last_row = data.iloc[-1]
-    last_two = data.iloc[-2]
+def cal_resistance(df: pd.DataFrame):
+    # df의 마지막 127개 행 선택
+    df_tail = df.tail(127)
+
+    price_max_peaks = df_tail[
+        (df_tail["avg_price"] > df_tail["avg_price"].shift(1))
+        & (df_tail["avg_price"] > df_tail["avg_price"].shift(-1))
+        & (df_tail["avg_price"].shift(1) > df_tail["avg_price"].shift(2))
+        & (df_tail["avg_price"].shift(-1) > df_tail["avg_price"].shift(-2))
+    ]
+
+    if price_max_peaks.empty:
+        return 0.0
+
+    # 평균 값을 담기 위한 리스트 초기화
+    volumes_prices = []
+
+    # 조건을 만족하는 행들의 인덱스 리스트 생성
+    true_indices = price_max_peaks.index
+
+    for index in true_indices:
+        # 현재 행, 이전 행, 다음 행의 volume_R 값의 평균 계산
+        volume_mean = df.loc[index - 1 : index + 1, "volume_R"].mean()
+        volumes_prices.append((volume_mean, df.loc[index, ["close", "open"]].max()))
+
+    # 가장 최근의 가격 값 중 거래량 비율이 1보다 큰 값
+    for element in reversed(volumes_prices):
+        if element[0] > 1:
+            return element[1]
+
+    return 0.0
+
+
+def cal_support(df: pd.DataFrame):
+    # df의 마지막 127개 행 선택
+    df_tail = df.tail(127)
+
+    price_min_troughs = df_tail[
+        (df_tail["avg_price"] < df_tail["avg_price"].shift(1))
+        & (df_tail["avg_price"] < df_tail["avg_price"].shift(-1))
+        & (df_tail["avg_price"].shift(1) < df_tail["avg_price"].shift(2))
+        & (df_tail["avg_price"].shift(-1) < df_tail["avg_price"].shift(-2))
+    ]
+
+    if price_min_troughs.empty:
+        return float("inf")
+
+    # 평균 값을 담기 위한 리스트 초기화
+    volumes_prices = []
+
+    # 조건을 만족하는 행들의 인덱스 리스트 생성
+    true_indices = price_min_troughs.index
+
+    for index in true_indices:
+        # 현재 행, 이전 행, 다음 행의 volume_R 값의 평균 계산
+        volume_mean = df.loc[index - 1 : index + 1, "volume_R"].mean()
+        volumes_prices.append((volume_mean, df.loc[index, ["close", "open"]].min()))
+
+    # 가장 최근의 가격 값 중 거래량 비율이 1보다 큰 값
+    for element in reversed(volumes_prices):
+        if element[0] > 1:
+            return element[1]
+
+    return float("inf")
+
+
+def ha_long(df: pd.DataFrame, v_coff) -> bool:
+    last_row = df.iloc[-1]
+    last_two = df.iloc[-2]
+
     return (
-        last_row["close"] > last_row["open"]
-        and last_row["close"] < last_row["EMA50"]
-        and (
-            last_row["volume"] >= last_row["volume_MA"] * v_coff
-            or (
-                last_two["volume"] >= last_two["volume_MA"] * v_coff
-                and last_two["close"] > last_two["open"]
-            )
-        )
+        last_row["ha_close"] > last_row["ha_open"]
+        and last_row["volume"] >= last_row["volume_MA"] * v_coff
+        and last_row["open"] < max(last_row["EMA20"], last_row["EMA50"])
+        and last_row["close"] > last_row["open"]
         and last_row["avg_price"] > last_two["avg_price"]
     )
 
 
-def reverse_short(data: pd.DataFrame, i, v_coff) -> bool:
-    last_row = data.iloc[-1]
-    last_two = data.iloc[-2]
+def ha_short(df: pd.DataFrame, v_coff) -> bool:
+    last_row = df.iloc[-1]
+    last_two = df.iloc[-2]
+
     return (
-        last_row["close"] < last_row["open"]
-        and last_row["close"] > last_row["EMA50"]
-        and (
-            last_row["volume"] >= last_row["volume_MA"] * v_coff
-            or (
-                last_two["volume"] >= last_two["volume_MA"] * v_coff
-                and last_two["close"] < last_two["open"]
-            )
-        )
+        last_row["ha_close"] < last_row["ha_open"]
+        and last_row["volume"] >= last_row["volume_MA"] * v_coff
+        and last_row["open"] > min(last_row["EMA20"], last_row["EMA50"])
+        and last_row["close"] < last_row["open"]
         and last_row["avg_price"] < last_two["avg_price"]
     )
 
 
-def just_long(df: pd.DataFrame, i) -> bool:
-    volume = df.at[i, "volume"]
-    volume_MA = df.at[i, "volume_MA"]
+def ha_trend_long(df: pd.DataFrame, v_coff) -> bool:
+    last_row = df.iloc[-1]
+    last_two = df.iloc[-2]
 
-    if df.at[i, "close"] > df.at[i, "open"]:
-        return (
-            volume >= volume_MA * 1.5
-            and df.at[i, "close"] > df.at[i, "EMA50"]
-            and df.at[i, "open"] < df.at[i, "EMA50"]
-        )
+    return (
+        last_row["EMA10"] > last_row["EMA20"]
+        and last_row["EMA20"] > last_row["EMA50"]
+        and last_row["volume"] >= last_row["volume_MA"] * v_coff
+        and last_row["ha_close"] > last_row["ha_open"]
+        and last_two["ha_close"] < last_two["ha_open"]
+    )
 
-    return False
 
+def ha_trend_short(df: pd.DataFrame, v_coff) -> bool:
+    last_row = df.iloc[-1]
+    last_two = df.iloc[-2]
 
-def just_short(df: pd.DataFrame, i) -> bool:
-    volume = df.at[i, "volume"]
-    volume_MA = df.at[i, "volume_MA"]
-
-    if df.at[i, "close"] < df.at[i, "open"]:
-        return (
-            volume >= volume_MA * 1.5
-            and df.at[i, "close"] < df.at[i, "EMA50"]
-            and df.at[i, "open"] > df.at[i, "EMA50"]
-        )
-
-    return False
+    return (
+        last_row["EMA10"] < last_row["EMA20"]
+        and last_row["EMA20"] < last_row["EMA50"]
+        and last_row["volume"] >= last_row["volume_MA"] * v_coff
+        and last_row["ha_close"] < last_row["ha_open"]
+        and last_two["ha_close"] > last_two["ha_open"]
+    )
 
 
 """
