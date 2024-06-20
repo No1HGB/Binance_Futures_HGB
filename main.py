@@ -130,10 +130,10 @@ async def main(symbol, leverage, interval):
             # 숏
             elif h_short or h_t_short:
 
-                price = last_row["close"]
-                raw_quantity = balance * (ratio / 100) / price * leverage
+                entryPrice = last_row["close"]
+                raw_quantity = balance * (ratio / 100) / entryPrice * leverage
                 quantity = format_quantity(raw_quantity, symbol)
-                stopPrice = cal_stop_price(price, "SELL", symbol)
+                stopPrice = cal_stop_price(entryPrice, "SELL", symbol)
                 support = cal_support(data)
                 if support <= entryPrice * (1 - 0.01):
                     profitPrice = support * (1 + 0.001)
@@ -142,7 +142,7 @@ async def main(symbol, leverage, interval):
                     else:
                         profitPrice = round(profitPrice, 2)
                 else:
-                    profitPrice = cal_profit_price(price, "SELL", symbol)
+                    profitPrice = cal_profit_price(entryPrice, "SELL", symbol)
 
                 await open_position(
                     key,
