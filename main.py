@@ -75,6 +75,7 @@ async def main(symbol, leverage, interval):
             if h_short or h_t_short:
                 await tp_sl(key, secret, symbol, "SELL", positionAmt)
                 logging.info(f"{symbol} {interval} long position all close")
+                await asyncio.sleep(0.1)
 
         elif positionAmt < 0:
             positionAmt = abs(positionAmt)
@@ -82,6 +83,7 @@ async def main(symbol, leverage, interval):
             if h_long or h_t_long:
                 await tp_sl(key, secret, symbol, "BUY", positionAmt)
                 logging.info(f"{symbol} {interval} short position all close")
+                await asyncio.sleep(0.1)
 
         # 포지션 다시 가져오기(종료된 경우 고려)
         position = await get_position(key, secret, symbol)
