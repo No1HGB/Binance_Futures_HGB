@@ -28,7 +28,7 @@ stop_loss_ratio = 0.015
 win_count = 0
 loss_count = 0
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=1200)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=1000)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
@@ -137,14 +137,11 @@ for i in range(51, len(df)):
 
             # 익절가 설정
             df_tail = df.iloc[i - 150 : i]
-            resistance_list = cal_resistance(df_tail)
-            if not resistance_list:
-                take_profit_price = entry_price * (1 + take_profit_ratio)
+            resistance = cal_resistance(df_tail)
+            if resistance >= entry_price * (1 + 0.01):
+                take_profit_price = resistance * (1 - 0.001)
             else:
-                for resistance in resistance_list:
-                    if resistance >= entry_price * (1 + 0.01):
-                        take_profit_price = resistance * (1 - 0.001)
-                        break
+                take_profit_price = entry_price * (1 + take_profit_ratio)
 
         elif h_short or h_t_short:
 
@@ -158,14 +155,11 @@ for i in range(51, len(df)):
 
             # 익절가 설정
             df_tail = df.iloc[i - 150 : i]
-            support_list = cal_support(df_tail)
-            if not support_list:
-                take_profit_price = entry_price * (1 - take_profit_ratio)
+            support = cal_support(df_tail)
+            if support <= entry_price * (1 - 0.01):
+                take_profit_price = support * (1 + 0.001)
             else:
-                for support in support_list:
-                    if support <= entry_price * (1 - 0.01):
-                        take_profit_price = support * (1 + 0.001)
-                        break
+                take_profit_price = entry_price * (1 - take_profit_ratio)
 
 
 # 백테스트 결과 계산

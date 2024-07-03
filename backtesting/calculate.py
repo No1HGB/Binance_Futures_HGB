@@ -43,7 +43,7 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def cal_resistance(df: pd.DataFrame) -> list:
+def cal_resistance(df: pd.DataFrame):
     # df의 마지막 127개 행 선택
     df_tail = df.tail(127)
 
@@ -55,15 +55,14 @@ def cal_resistance(df: pd.DataFrame) -> list:
     ]
 
     if price_max_peaks.empty:
-        return []
+        return 0.0
 
     # 평균 값을 담기 위한 리스트 초기화
-    prices = []
+    volumes_prices = []
 
     # 조건을 만족하는 행들의 인덱스 리스트 생성
     true_indices = price_max_peaks.index
 
-    """
     for index in true_indices:
         # 현재 행, 이전 행, 다음 행의 volume_R 값의 평균 계산
         volume_mean = df.loc[index - 1 : index + 1, "volume_R"].mean()
@@ -73,15 +72,11 @@ def cal_resistance(df: pd.DataFrame) -> list:
     for element in reversed(volumes_prices):
         if element[0] > 1:
             return element[1]
-    """
 
-    for index in true_indices:
-        prices.append(df.loc[index, ["close", "open"]].max())
-
-    return prices
+    return 0.0
 
 
-def cal_support(df: pd.DataFrame) -> list:
+def cal_support(df: pd.DataFrame):
     # df의 마지막 127개 행 선택
     df_tail = df.tail(127)
 
@@ -93,15 +88,14 @@ def cal_support(df: pd.DataFrame) -> list:
     ]
 
     if price_min_troughs.empty:
-        return []
+        return float("inf")
 
     # 평균 값을 담기 위한 리스트 초기화
-    prices = []
+    volumes_prices = []
 
     # 조건을 만족하는 행들의 인덱스 리스트 생성
     true_indices = price_min_troughs.index
 
-    """
     for index in true_indices:
         # 현재 행, 이전 행, 다음 행의 volume_R 값의 평균 계산
         volume_mean = df.loc[index - 1 : index + 1, "volume_R"].mean()
@@ -111,9 +105,5 @@ def cal_support(df: pd.DataFrame) -> list:
     for element in reversed(volumes_prices):
         if element[0] > 1:
             return element[1]
-    """
 
-    for index in true_indices:
-        prices.append(df.loc[index, ["close", "open"]].min())
-
-    return prices
+    return float("inf")
