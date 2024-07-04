@@ -17,7 +17,12 @@ def calculate_values(df: pd.DataFrame) -> pd.DataFrame:
     df["maker_buy"] = df["volume"] - df["taker_buy"]
     df["volume_R"] = df["volume"] / df["volume_MA"]
 
-    # 가격 극대값과 극소값 찾기
+    df["delta"] = (df["close"] - df["open"]) / df["open"] * 100
+    alpha = 2 / (50 + 1)
+    df["delta_ema"] = abs(df["delta"]).ewm(alpha=alpha, adjust=False).mean()
+
+    df["delta_tp"] = df["delta_ema"].rolling(window=5).sum()
+    df["delta_sl"] = df["delta_ema"].rolling(window=3).sum()
 
     # 하이킨아시
     df["ha_close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4
