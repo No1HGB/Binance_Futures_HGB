@@ -28,21 +28,24 @@ stop_loss_ratio = 0.015
 win_count = 0
 loss_count = 0
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=1200)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=3700)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)
 df = calculate_values(df)
 
+delta_abs = []
+
 # 백테스트 실행
 for i in range(51, len(df)):
     if capital <= 0:
         break
+    criteria: float = 1.37
 
-    h_long = ha_long(df, i, 1.4)
-    h_short = ha_short(df, i, 1.4)
-    h_t_long = ha_trend_long(df, i, 1.4)
-    h_t_short = ha_trend_short(df, i, 1.4)
+    h_long = ha_long(df, i, criteria)
+    h_short = ha_short(df, i, criteria)
+    h_t_long = ha_trend_long(df, i, criteria)
+    h_t_short = ha_trend_short(df, i, criteria)
 
     if position == 1:
         current_price = df.at[i, "close"]
@@ -127,6 +130,9 @@ for i in range(51, len(df)):
     if position == 0:  # 포지션이 없다면
         if h_long or h_t_long:
 
+            delta_abs.append(abs(df.at[i, "delta"]))
+            abs_mean = sum(delta_abs) / len(delta_abs)
+
             position = 1
             margin = capital / 4
             capital -= margin * leverage * (0.1 / 100)
@@ -144,6 +150,9 @@ for i in range(51, len(df)):
                 take_profit_price = entry_price * (1 + take_profit_ratio)
 
         elif h_short or h_t_short:
+
+            delta_abs.append(abs(df.at[i, "delta"]))
+            abs_mean = sum(delta_abs) / len(delta_abs)
 
             position = -1
             margin = capital / 4
@@ -173,3 +182,4 @@ print(f"Wins: {win_count}")
 print(f"Losses: {loss_count}")
 print(f"Win Rate: {win_rate:.2f}%")
 print(f"Final Capital: {final_capital:.2f}")
+print(f"abs_mean:{sum(delta_abs)/len(delta_abs)}")
