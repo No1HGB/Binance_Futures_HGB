@@ -91,7 +91,10 @@ def ha_trend_long(df: pd.DataFrame, i, v_coff) -> bool:
         and df.at[i, "EMA20"] > df.at[i, "EMA50"]
         and df.at[i, "volume"] >= df.at[i, "volume_MA"] * v_coff
         and df.at[i, "ha_close"] > df.at[i, "ha_open"]
-        and df.at[i - 1, "ha_close"] < df.at[i - 1, "ha_open"]
+        and (
+            df.at[i - 1, "ha_close"] < df.at[i - 1, "ha_open"]
+            or df.at[i - 2, "ha_close"] < df.at[i - 2, "ha_open"]
+        )
     )
 
 
@@ -102,7 +105,10 @@ def ha_trend_short(df: pd.DataFrame, i, v_coff) -> bool:
         and df.at[i, "EMA20"] < df.at[i, "EMA50"]
         and df.at[i, "volume"] >= df.at[i, "volume_MA"] * v_coff
         and df.at[i, "ha_close"] < df.at[i, "ha_open"]
-        and df.at[i - 1, "ha_close"] > df.at[i - 1, "ha_open"]
+        and (
+            df.at[i - 1, "ha_close"] > df.at[i - 1, "ha_open"]
+            or df.at[i - 2, "ha_close"] > df.at[i - 2, "ha_open"]
+        )
     )
 
 

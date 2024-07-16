@@ -28,7 +28,7 @@ stop_loss_ratio = 0.015
 win_count = 0
 loss_count = 0
 
-df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=3700)
+df: pd.DataFrame = fetch_data(symbol="BTCUSDT", interval="1h", numbers=1200)
 df["EMA10"] = calculate_ema(df, 10)
 df["EMA20"] = calculate_ema(df, 20)
 df["EMA50"] = calculate_ema(df, 50)

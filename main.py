@@ -39,6 +39,7 @@ async def main(symbol, leverage, interval):
     secret = Config.secret
     ratio = Config.ratio
     start = 0
+    volume_coff = 1.37
 
     while True:
         # 정시까지 기다리기
@@ -61,10 +62,10 @@ async def main(symbol, leverage, interval):
 
         last_row = data.iloc[-1]
 
-        h_long = ha_long(data, 1.4)
-        h_short = ha_short(data, 1.4)
-        h_t_long = ha_trend_long(data, 1.4)
-        h_t_short = ha_trend_short(data, 1.4)
+        h_long = ha_long(data, volume_coff)
+        h_short = ha_short(data, volume_coff)
+        h_t_long = ha_trend_long(data, volume_coff)
+        h_t_short = ha_trend_short(data, volume_coff)
 
         position = await get_position(key, secret, symbol)
         positionAmt = float(position["positionAmt"])

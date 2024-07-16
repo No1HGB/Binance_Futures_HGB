@@ -131,26 +131,34 @@ def ha_short(df: pd.DataFrame, v_coff) -> bool:
 def ha_trend_long(df: pd.DataFrame, v_coff) -> bool:
     last_row = df.iloc[-1]
     last_two = df.iloc[-2]
+    last_three = df.iloc[-3]
 
     return (
         last_row["EMA10"] > last_row["EMA20"]
         and last_row["EMA20"] > last_row["EMA50"]
         and last_row["volume"] >= last_row["volume_MA"] * v_coff
         and last_row["ha_close"] > last_row["ha_open"]
-        and last_two["ha_close"] < last_two["ha_open"]
+        and (
+            last_two["ha_close"] < last_two["ha_open"]
+            or last_three["ha_close"] < last_three["ha_open"]
+        )
     )
 
 
 def ha_trend_short(df: pd.DataFrame, v_coff) -> bool:
     last_row = df.iloc[-1]
     last_two = df.iloc[-2]
+    last_three = df.iloc[-3]
 
     return (
         last_row["EMA10"] < last_row["EMA20"]
         and last_row["EMA20"] < last_row["EMA50"]
         and last_row["volume"] >= last_row["volume_MA"] * v_coff
         and last_row["ha_close"] < last_row["ha_open"]
-        and last_two["ha_close"] > last_two["ha_open"]
+        and (
+            last_two["ha_close"] > last_two["ha_open"]
+            or last_three["ha_close"] > last_three["ha_open"]
+        )
     )
 
 
